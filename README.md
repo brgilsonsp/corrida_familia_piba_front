@@ -13,3 +13,10 @@ git status
 ### Adcionar no track
 git add .
 git add <NOME_ARQUIVO_COMPLETO>
+
+### Adicionar arquivos para versionamento
+git commit -m '<MENSAGEM>'
+
+### Enviar para o repositório remoto
+git push
+
