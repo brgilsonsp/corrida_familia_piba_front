@@ -1,0 +1,33 @@
+{
+  "expo": {
+    "name": "Cronometro",
+    "slug": "Cronometro",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/cronometro.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/cronometro.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/cronometro.png",
+        "backgroundColor": "#ffffff"
+      },
+      "package": "com.develvis.Cronometro"
+    },
+    "web": {
+      "favicon": "./assets/cronometro.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "dea6a98f-9b89-48bb-baaf-dd1d738d19ba"
+      }
+    }
+  }
+}
