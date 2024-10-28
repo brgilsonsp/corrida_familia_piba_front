@@ -50,25 +50,27 @@ const styles = StyleSheet.create({
     fontWeight: 'bold', // Texto em negrito
   },
 
-  // Estilo para a linha de entrada
   inputRow: {
+    marginBottom: 10, // Espaçamento abaixo da linha de entrada
+  },
+  
+  // Container para alinhar o input e o botão
+  rowContainer: {
     flexDirection: 'row', // Alinha os filhos em uma linha
     alignItems: 'center', // Centraliza os itens verticalmente
-    marginBottom: 10, // Espaçamento abaixo da linha de entrada
   },
 
   // Estilo para os campos de entrada
   input: {
-    width: '100%', // Largura total do campo de entrada
+    width: '100%', // Largura de 75% do contêiner pai
     height: 50, // Altura fixa de 50 pixels
     borderColor: '#ccc', // Cor da borda do campo de entrada
     backgroundColor: '#fff', // Cor de fundo branca
     borderWidth: 1, // Largura da borda de 1 pixel
     borderRadius: 5, // Bordas arredondadas
     paddingHorizontal: 10, // Espaçamento interno horizontal de 10 pixels
-    marginBottom: 20, // Espaçamento abaixo do campo de entrada
+    marginBottom: 5, // Margem abaixo do input para espaçamento
   },
-
   // Estilo para o botão de salvar
   saveButton: {
     width: '20%', // Largura de 20% do contêiner pai
@@ -76,8 +78,13 @@ const styles = StyleSheet.create({
     borderRadius: 5, // Bordas arredondadas
     backgroundColor: '#007BFF', // Cor de fundo azul
     alignItems: 'center', // Centraliza o conteúdo do botão
-    marginBottom: 20, // Espaçamento abaixo do botão
-    marginLeft: 30, // Espaçamento à esquerda do botão
+    marginLeft: 10, // Espaçamento à esquerda do botão
+  },
+  responseMessage: {
+    marginTop: 8, // Margem acima para espaçamento
+    fontSize: 14, // Tamanho da fonte
+    color: 'red', // Cor do texto
+    textAlign: 'left', // Alinhamento do texto
   },
 
   // Estilo para o texto do botão
@@ -114,7 +121,7 @@ const styles = StyleSheet.create({
     width: 150, // Largura fixa de 150 pixels
     height: 150, // Altura fixa de 150 pixels
     marginBottom: 20, // Espaçamento abaixo da imagem
-    marginTop: 20, // Espaçamento acima da imagem
+    marginTop: 80, // Espaçamento acima da imagem
     alignSelf: 'center', // Centraliza a imagem na tela
   },
 
@@ -156,6 +163,49 @@ const styles = StyleSheet.create({
     marginTop: 20,
     textAlign: 'center',
     color: '#555',
+  },
+  suggestionsContainer: {
+    position: 'absolute',
+    top: 220, // Altere este valor conforme necessário
+    left: 20,
+    right: 20,
+    backgroundColor: 'white',
+    borderRadius: 8,
+    elevation: 5, // Sombra para dar efeito de "modal"
+    zIndex: 1, // Garante que este container esteja acima dos outros elementos
+    maxHeight: 200, // Limita a altura da lista de sugestões
+  },
+  suggestionItem: {
+    padding: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#ccc',
+  },
+  // Adicione ao arquivo Styles.js
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContainer: {
+    width: '80%',
+    padding: 20,
+    backgroundColor: 'white',
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  modalText: {
+    fontSize: 18,
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  // Adicione ao arquivo Styles.js
+  userName: {
+    position: 'absolute',
+    top: 20, // Ajuste conforme necessário para seu layout
+    left: 20, // Distância da borda esquerda
+    fontSize: 25,
+    fontWeight: 'bold',
   },
 });
 

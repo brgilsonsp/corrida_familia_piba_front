@@ -32,7 +32,7 @@ export default function ClassificacaoGeral() {
   // Função para buscar os dados no backend
   const buscarDados = async () => {
     try {
-      const response = await fetch(`https://seu-backend.com/api/ranking?sexo=${sexo}&idade=${idade}&tipo=${tipo}`);
+      const response = await fetch(`http://?sexo=${sexo}&idade=${idade}&tipo=${tipo}`);
       // Faz uma requisição para a API, utilizando sexo, idade e tipo como parâmetros de busca.
 
       const data = await response.json(); 

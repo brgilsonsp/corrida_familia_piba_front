@@ -1,53 +1,81 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, Image } from 'react-native';
-import styles from './Styles'; // Importa os estilos definidos em um arquivo separado
+import React, { useState } from 'react';
+import { View, Text, TextInput, TouchableOpacity, Image, Modal } from 'react-native';
+import styles from './Styles';
 
 export default function Home({ navigation }) {
+  const [userName, setUserName] = useState('');
+  const [isNameSet, setIsNameSet] = useState(false);
+  const [isModalVisible, setModalVisible] = useState(true);
+
+  const handleNameSubmit = () => {
+    if (userName.trim()) {
+      setIsNameSet(true);
+      setModalVisible(false);
+    }
+  };
+
   return (
-    <View style={styles.container}> {/* Container principal que envolve todos os elementos */}
-      <Image
-        source={require('../../assets/cronometro.png')} // Caminho da imagem do cronômetro
-        style={styles.image} // Estilo aplicado à imagem
-      />
-      
-      {/* Botão para navegar para a tela de Cronômetro */}
-      <TouchableOpacity
-        style={styles.button} // Estilo do botão
-        onPress={() => navigation.navigate('Cronometro')} // Navega para a tela de Cronômetro ao ser pressionado
+    <View style={styles.container}>
+      {isNameSet && <Text style={styles.userName}>Olá, {userName}!</Text>}
+
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={isModalVisible}
+        onRequestClose={() => setModalVisible(false)}
       >
-        <Text style={styles.buttonText}>Cronômetro</Text> {/* Texto do botão */}
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <Text style={styles.modalText}>Por favor, insira seu nome:</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Digite seu nome"
+              value={userName}
+              onChangeText={setUserName}
+            />
+            <TouchableOpacity style={styles.button} onPress={handleNameSubmit}>
+              <Text style={styles.buttonText}>Confirmar</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      <Image source={require('../../assets/cronometro.png')} style={styles.image} />
+
+      <TouchableOpacity
+        style={styles.button}
+        onPress={() => navigation.navigate('Cronometro', { userName })} // Passa o nome do usuário
+      >
+        <Text style={styles.buttonText}>Cronômetro</Text>
       </TouchableOpacity>
 
-      {/* Botão para navegar para a tela de Atualizar Dados */}
+      {/* Outros botões de navegação */}
       <TouchableOpacity
-        style={styles.button} // Estilo do botão
-        onPress={() => navigation.navigate('AtualizarDados')} // Navega para a tela de Atualizar Dados ao ser pressionado
+        style={styles.button}
+        onPress={() => navigation.navigate('AtualizarDados')}
       >
-        <Text style={styles.buttonText}>Atualizar Dados</Text> {/* Texto do botão */}
+        <Text style={styles.buttonText}>Atualizar Dados</Text>
       </TouchableOpacity>
 
-      {/* Botão para navegar para a tela de Check in */}
       <TouchableOpacity
-        style={styles.button} // Estilo do botão
-        onPress={() => navigation.navigate('Checkin')} // Navega para a tela de Check in ao ser pressionado
+        style={styles.button}
+        onPress={() => navigation.navigate('Checkin')}
       >
-        <Text style={styles.buttonText}>Check in</Text> {/* Texto do botão */}
+        <Text style={styles.buttonText}>Check in</Text>
       </TouchableOpacity>
 
-      {/* Botão para navegar para a tela de Classificação */}
       <TouchableOpacity
-        style={styles.button} // Estilo do botão
-        onPress={() => navigation.navigate('Classificacao')} // Navega para a tela de Classificação ao ser pressionado
+        style={styles.button}
+        onPress={() => navigation.navigate('Classificacao')}
       >
-        <Text style={styles.buttonText}>Classificação</Text> {/* Texto do botão */}
+        <Text style={styles.buttonText}>Classificação</Text>
       </TouchableOpacity>
 
-      {/* Botão para navegar para a tela de Classificação Geral */}
       <TouchableOpacity
-        style={styles.button} // Estilo do botão
-        onPress={() => navigation.navigate('ClassificacaoGeral')} // Navega para a tela de Classificação Geral ao ser pressionado
+        style={styles.button}
+        onPress={() => navigation.navigate('ClassificacaoGeral')}
       >
-        <Text style={styles.buttonText}>Classificação Geral</Text> {/* Texto do botão */}
+        <Text style={styles.buttonText}>Classificação Geral</Text>
       </TouchableOpacity>
     </View>
   );

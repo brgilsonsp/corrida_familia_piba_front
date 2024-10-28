@@ -2,6 +2,7 @@
   "name": "cronometro",
   "version": "1.0.0",
   "main": "expo/AppEntry.js",
+  "proxy": "http://localhost:9090",
   "scripts": {
     "start": "expo start",
     "android": "expo start --android",
@@ -12,6 +13,7 @@
     "@expo/metro-runtime": "~3.2.3",
     "@react-navigation/native": "^6.1.18",
     "@react-navigation/stack": "^6.4.1",
+    "axios": "^1.7.7",
     "expo": "~51.0.38",
     "expo-sharing": "~12.0.1",
     "expo-status-bar": "~1.12.1",
