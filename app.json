@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "Cronometro",
-    "slug": "Cronometro",
+    "slug": "cronometro",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/cronometro.png",
@@ -21,7 +21,9 @@
         "backgroundColor": "#ffffff"
       },
       "package": "com.develvis.Cronometro",
-      "permissions": ["INTERNET"],
+      "permissions": [
+        "INTERNET"
+      ],
       "config": {
         "usesCleartextTraffic": true
       }
@@ -31,9 +33,10 @@
     },
     "extra": {
       "eas": {
-        "projectId": "dea6a98f-9b89-48bb-baaf-dd1d738d19ba"
+        "projectId": "21560f6f-d336-4a97-8c32-ce0c5c9a8410"
       },
       "proxy": "http://192.168.0.5:9111"
-    }
+    },
+    "owner": "develvis"
   }
 }
