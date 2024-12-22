@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Image, Modal, AppState, AppStateStatus } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, Image, Modal, AppState, AppStateStatus, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import styles from './Styles';
 
 export default function Home() {
   const router = useRouter();
@@ -82,7 +81,6 @@ export default function Home() {
     <View style={styles.container}>
       {userName ? <Text style={styles.userName}>Olá, {userName}!</Text> : null}
 
-      {/* Modal para capturar o nome caso não esteja configurado */}
       <Modal
         animationType="slide"
         transparent={true}
@@ -105,7 +103,6 @@ export default function Home() {
         </View>
       </Modal>
 
-      {/* Modal para senha */}
       <Modal
         animationType="slide"
         transparent={true}
@@ -131,7 +128,6 @@ export default function Home() {
 
       <Image source={require('../../assets/cronometro.png')} style={styles.image} />
 
-      {/* Botões de navegação */}
       <TouchableOpacity
         style={styles.button}
         onPress={() => router.push(`/Cronometro?userName=${userName}`)}
@@ -167,7 +163,6 @@ export default function Home() {
         <Text style={styles.buttonText}>Atualizar Dados</Text>
       </TouchableOpacity>
 
-      {/* Botão para abrir o modal de senha */}
       <TouchableOpacity
         style={styles.configButton}
         onPress={handleSettingsPress}
@@ -177,3 +172,87 @@ export default function Home() {
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    padding: 20,
+    backgroundColor: '#F0F8FF', // Gradiente suave
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContainer: {
+    width: '80%',
+    padding: 25,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 15,
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+    elevation: 5, // Para Android
+    alignItems: 'center',
+  },
+  modalText: {
+    fontSize: 18,
+    color: '#333',
+    marginBottom: 15,
+    textAlign: 'center',
+  },
+  userName: {
+    fontSize: 25,
+    fontWeight: 'bold',
+    color: '#333',
+    position: 'absolute',
+    top: 20,
+    left: 20,
+  },
+  configButton: {
+    position: 'absolute',
+    top: 20,
+    right: 20,
+    backgroundColor: '#007BFF',
+    padding: 10,
+    borderRadius: 30,
+    elevation: 10,
+    zIndex: 1,
+  },
+  button: {
+    width: '80%',
+    backgroundColor: '#007BFF',
+    padding: 15,
+    borderRadius: 10,
+    alignItems: 'center',
+    marginTop: 15,
+    marginBottom: 20,
+    alignSelf: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowRadius: 5,
+    elevation: 4, // Para Android
+  },
+  buttonText: {
+    color: '#fff',
+    fontSize: 16,
+  },
+  input: {
+    width: '100%',
+    height: 50,
+    borderColor: '#ccc',
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    marginBottom: 20,
+    backgroundColor: '#f7f7f7',
+  },
+  image: {
+    width: 150,
+    height: 150,
+    marginBottom: 20,
+    alignSelf: 'center',
+    marginTop: 50,
+  },
+});
