@@ -14,7 +14,7 @@ interface Corredor {
   sexo: string;
   data_nascimento: string;
   modalidade: string;
-  numero_peito: number;
+  numero_peito: string;
   monitor: string;
 }
 
@@ -163,102 +163,142 @@ const handleDateChange = (event: any, date?: Date) => {
   }
 };
 
-  const handlePostNewCorredor = async () => {
-    if (!query || !cpfOrRne || !number || !gender || !modalidade || !dob) {
-      Alert.alert('Erro', 'Por favor, preencha todos os campos.');
-      return;
-    }
+const handlePostNewCorredor = async () => {
+  // Verificar se todos os campos estão preenchidos
+  if (!query || !cpfOrRne || !number || !gender || !modalidade || !dob) {
+    Alert.alert('Erro', 'Por favor, preencha todos os campos.');
+    return;
+  }
 
-    const corredor = {
-      nome: query,
-      documento: cpfOrRne,
-      numero_peito: parseInt(number, 10),
-      sexo: gender,
-      data_nascimento: formatDate(dob),
-      modalidade,
-      monitor: 'default'
-    };
-
-    try {
-      const response = await fetch('${urlBase}.execute-api.us-east-1.amazonaws.com/prd/atletas', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(corredor)
-      });
-      const data = await response.json();
-      if (response.ok) {
-        Alert.alert('Sucesso', 'Novo atleta cadastrado com sucesso!');
-        // Adiciona a lógica para inserir no SQLite
-        await insertCorredor({
-          numero_corredor: corredor.numero_peito,
-          monitor: corredor.monitor,
-          tempo_final: null,
-          tempo_de_atraso: null
-        });
-
-        // Recupera e exibe os dados do banco no console
-        fetchCorredores();
-      } else {
-        Alert.alert('Erro', data.message || 'Não foi possível cadastrar o atleta.');
-      }
-    } catch (error) {
-      console.error('Erro ao cadastrar novo atleta:', error);
-      Alert.alert('Erro', 'Não foi possível cadastrar o atleta.');
-    }
+  // Criar o objeto com os dados do corredor
+  const corredor = {
+    nome: query,
+    documento: cpfOrRne,
+    numero_peito: parseInt(number, 10),  // Garantir que o número do peito seja uma string
+    sexo: gender,
+    data_nascimento: formatDate(dob),  // A data será convertida para string
+    modalidade,
+    monitor: 'default'
   };
 
-  const handlePutCorredor = async () => {
-    if (!query || !cpfOrRne || !number || !gender || !modalidade || !dob) {
-      Alert.alert('Erro', 'Por favor, preencha todos os campos.');
-      return;
-    }
+  try {
+    // Enviar os dados para a API via POST
+    const response = await fetch(`${urlBase}.execute-api.us-east-1.amazonaws.com/prd/atletas`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(corredor)
+    });
 
-    if (!selectedId) {
-      Alert.alert('Erro', 'Nenhum atleta selecionado.');
-      return;
-    }
+    const data = await response.json();
 
-    const corredor = {
-      nome: query,
-      documento: cpfOrRne,
-      numero_peito: parseInt(number, 10),
-      sexo: gender,
-      data_nascimento: formatDate(dob),
-      modalidade,
-      monitor: 'default'
-    };
+    // Se o cadastro for bem-sucedido
+    if (response.ok) {
+      Alert.alert('Sucesso', 'Novo atleta cadastrado com sucesso!');
 
-    try {
-      const response = await fetch(`${urlBase}.execute-api.us-east-1.amazonaws.com/prd/atletas/${selectedId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(corredor)
+      // Inserir o novo corredor no banco de dados SQLite
+      await insertCorredor({
+        numero_corredor: corredor.numero_peito,  // Garantir que o número seja convertido para número
+        monitor: corredor.monitor,
+        tempo_final: null,
+        tempo_de_atraso: null
       });
-      const data = await response.json();
-      if (response.ok) {
-        Alert.alert('Sucesso', 'Check-in realizado com sucesso!');
-        // Adiciona a lógica para inserir no SQLite
-        await insertCorredor({
-          numero_corredor: corredor.numero_peito,
-          monitor: corredor.monitor,
-          tempo_final: null,
-          tempo_de_atraso: null
-        });
 
-        // Recupera e exibe os dados do banco no console
-        fetchCorredores();
-      } else {
-        Alert.alert('Erro', data.message || 'Não foi possível realizar o check-in.');
-      }
-    } catch (error) {
-      console.error('Erro ao realizar check-in:', error);
-      Alert.alert('Erro', 'Não foi possível realizar o check-in.');
+      // Recuperar e exibir os dados do banco de dados
+      fetchCorredores();
+
+      // Limpar os campos de entrada após o cadastro
+      setQuery('');  // Limpar o nome
+      setCpfOrRne('');  // Limpar o CPF/RNE
+      setNumber('');  // Limpar o número do peito
+      setDob(new Date());  // Limpar a data de nascimento (definir como valor padrão ou vazio)
+      setGender('');  // Limpar o sexo
+      setModalidade('');  // Limpar a modalidade
+
+      // Tornar os campos editáveis novamente, caso necessário
+      setIsNameEditable(true);
+      setIsCpfOrRneEditable(true);
+      setIsNumberEditable(true);
+      setSelectedId(null);  // Limpar a seleção de ID, se houver
+    } else {
+      Alert.alert('Erro', data.message || 'Não foi possível cadastrar o atleta.');
     }
+  } catch (error) {
+    console.error('Erro ao cadastrar novo atleta:', error);
+    Alert.alert('Erro', 'Não foi possível cadastrar o atleta.');
+  }
+};
+
+
+const handlePutCorredor = async () => {
+  if (!query || !cpfOrRne || !number || !gender || !modalidade || !dob) {
+    Alert.alert('Erro', 'Por favor, preencha todos os campos.');
+    return;
+  }
+
+  if (!selectedId) {
+    Alert.alert('Erro', 'Nenhum atleta selecionado.');
+    return;
+  }
+
+  const corredor = {
+    nome: query,
+    documento: cpfOrRne,
+    numero_peito: parseInt(number, 10),
+    sexo: gender,
+    data_nascimento: formatDate(dob),  // A data será convertida para string
+    modalidade,
+    monitor: 'default'
   };
+
+  try {
+    const response = await fetch(`${urlBase}.execute-api.us-east-1.amazonaws.com/prd/atletas/${selectedId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(corredor)
+    });
+
+    const data = await response.json();
+
+    if (response.ok) {
+      Alert.alert('Sucesso', 'Check-in realizado com sucesso!');
+      
+      // Adiciona a lógica para inserir no SQLite
+      await insertCorredor({
+        numero_corredor: corredor.numero_peito,  // Garantir que o número seja convertido para número
+        monitor: corredor.monitor,
+        tempo_final: null,
+        tempo_de_atraso: null
+      });
+
+      // Recupera e exibe os dados do banco no console
+      fetchCorredores();
+
+      // Limpar os campos de entrada após o cadastro
+      setQuery('');  // Limpar o nome
+      setCpfOrRne('');  // Limpar o CPF/RNE
+      setNumber('');  // Limpar o número do peito
+      setDob(new Date());  // Limpar a data de nascimento (definir como valor padrão ou vazio)
+      setGender('');  // Limpar o sexo
+      setModalidade('');  // Limpar a modalidade
+
+      // Tornar os campos editáveis novamente, caso necessário
+      setIsNameEditable(true);
+      setIsCpfOrRneEditable(true);
+      setIsNumberEditable(true);
+      setSelectedId(null);  // Limpar a seleção de ID, se houver
+    } else {
+      Alert.alert('Erro', data.message || 'Não foi possível atualizar dados do atleta.');
+    }
+  } catch (error) {
+    console.error('Erro ao atualizar dados do atleta:', error);
+    Alert.alert('Erro', 'Não foi possível atualizar dados do atleta.');
+  }
+};
+
   const openDatePicker = () => {
     setShowDatePicker(true);
   };

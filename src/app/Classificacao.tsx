@@ -1,67 +1,53 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, FlatList, ScrollView, Modal, TextInput, StyleSheet } from 'react-native';
-import { Picker } from '@react-native-picker/picker';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import { useRouter } from 'expo-router';
-import axios from 'axios';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from 'expo-file-system'; // Para salvar arquivos localmente
 import * as Sharing from 'expo-sharing'; // Para compartilhar arquivos
+import searchCorredores from './database/initializeDatabase'; // Importar a função searchCorredores
 
-export default function ClassificacaoGeral() {
+export default function Classificacao() {
   const router = useRouter();
-  const [sexo, setSexo] = useState('Todos');
-  const [faixaEtaria, setFaixaEtaria] = useState('Todas');
-  const [categoria, setCategoria] = useState('Todas');
+  const [numeroCorredor, setNumeroCorredor] = useState('');
   const [results, setResults] = useState([]);
-  const [expandedIndex, setExpandedIndex] = useState(null);
-  const [apiUrlBase, setApiUrlBase] = useState('');
   const [modalVisible, setModalVisible] = useState(false);
-  const [nomeCorredor, setNomeCorredor] = useState(''); // Novo estado para o nome
-  const [numeroCorredor, setNumeroCorredor] = useState(''); // Novo estado para o número
-  
-  useEffect(() => {
-    const loadUrlBase = async () => {
-      const savedUrlBase = await AsyncStorage.getItem('apiUrlBase');
-      if (savedUrlBase) setApiUrlBase(savedUrlBase);
-    };
-    loadUrlBase();
-  }, []);
 
-  const buscarDados = async () => {
-    if (!apiUrlBase) {
-      console.error('URL base da API não foi definida');
-      return;
-    }
-
-    const fullUrl = `${apiUrlBase}.execute-api.us-east-1.amazonaws.com/corre-familia/classificacoes`;
-
+  // Função para buscar corredor por número
+  const buscarCorredorPorNumero = async () => {
     try {
-      const response = await axios.get(fullUrl, {
-        params: {
-          sexo: sexo,
-          faixa_etaria: faixaEtaria,
-          categoria: categoria,
-          nome_corredor: nomeCorredor || undefined, // Apenas envia se o valor existir
-          numero_corredor: numeroCorredor || undefined, // Apenas envia se o valor existir
-        },
-      });
-      setResults(response.data.dados);
-      await AsyncStorage.setItem('searchResults', JSON.stringify(response.data.dados)); // Armazenar resultados
-      setModalVisible(true); // Abre o modal quando os dados forem carregados
+      const numero = parseInt(numeroCorredor, 10);
+      if (isNaN(numero)) {
+        console.error('Número do corredor inválido');
+        return;
+      }
+
+      const corredores = await searchCorredores(numero); // Passando o número do corredor
+      if (corredores.length === 0) {
+        console.log('Nenhum corredor encontrado com o número informado');
+      }
+      setResults(corredores);
+      setModalVisible(true);
     } catch (error) {
-      console.error('Erro ao buscar dados:', error);
+      console.error('Erro ao buscar corredor:', error);
     }
   };
 
-  const toggleExpand = (index) => {
-    setExpandedIndex(expandedIndex === index ? null : index);
+  // Função para buscar todos os corredores
+  const buscarTodosCorredores = async () => {
+    try {
+      const corredores = await searchCorredores(); // Sem parâmetro, buscando todos
+      setResults(corredores);
+      setModalVisible(true);
+    } catch (error) {
+      console.error('Erro ao buscar todos os corredores:', error);
+    }
   };
 
+  // Gerar arquivo CSV para exportação
   const generateCSV = () => {
-    const header = 'Posição,Número,Nome,Idade,Sexo,Tempo\n';
-    const rows = results.map(item => 
-      `${item.position},${item.numero_atleta},${item.nome_completo_atleta},${item.idade},${item.sexo},${item.tempo_corrida}\n`
+    const header = 'Posição,Número,Nome,Tempo Final\n';
+    const rows = results.map((item, index) =>
+      `${item.posicao},${item.numero_corredor},${item.nome},${item.tempo_final}\n`
     ).join('');
     const csvContent = header + rows;
     const fileUri = FileSystem.documentDirectory + 'resultados.csv';
@@ -77,63 +63,25 @@ export default function ClassificacaoGeral() {
         <Icon name="arrow-left" size={24} color="#000" />
       </TouchableOpacity>
 
-      <Text style={styles.title}>Classificação Geral</Text>
-
-      <Text style={styles.label}>Selecione o Sexo:</Text>
-      <View style={styles.pickerContainer}>  {/* Contêiner com borda */}
-        <Picker selectedValue={sexo} style={styles.picker} onValueChange={(itemValue) => setSexo(itemValue)}>
-          <Picker.Item label="Todos" value="Todos" />
-          <Picker.Item label="Masculino" value="Masculino" />
-          <Picker.Item label="Feminino" value="Feminino" />
-        </Picker>
-      </View>
-
-      <Text style={styles.label}>Faixa Etária:</Text>
-      <View style={styles.pickerContainer}>  {/* Contêiner com borda */}
-        <Picker selectedValue={faixaEtaria} style={styles.picker} onValueChange={(itemValue) => setFaixaEtaria(itemValue)}>
-          <Picker.Item label="Todas" value="Todas" />
-          <Picker.Item label="6 - 7" value="6 - 7" />
-          <Picker.Item label="8 - 12" value="8 - 12" />
-          <Picker.Item label="13 - 15" value="13 - 15" />
-          <Picker.Item label="16 - 20" value="16 - 20" />
-          <Picker.Item label="21 - 30" value="21 - 30" />
-          <Picker.Item label="31 - 40" value="31 - 40" />
-          <Picker.Item label="41 - 50" value="41 - 50" />
-          <Picker.Item label="51 - 60" value="51 - 60" />
-          <Picker.Item label="61+" value="61+" />
-        </Picker>
-      </View>
-
-      <Text style={styles.label}>Categoria:</Text>
-      <View style={styles.pickerContainer}>  {/* Contêiner com borda */}
-        <Picker selectedValue={categoria} style={styles.picker} onValueChange={(itemValue) => setCategoria(itemValue)}>
-          <Picker.Item label="Todas" value="Todas" />
-          <Picker.Item label="Caminhada" value="Caminhada" />
-          <Picker.Item label="Corrida" value="Corrida" />
-        </Picker>
-      </View>
-
-      <Text style={styles.label}>Nome do Corredor:</Text>
-        <TextInput
-          style={styles.input}
-          value={nomeCorredor}
-          onChangeText={(text) => setNomeCorredor(text)}
-          placeholder="Digite o nome do corredor"
-        />
+      <Text style={styles.title}>Classificação</Text>
 
       <Text style={styles.label}>Número do Corredor:</Text>
-        <TextInput
-          style={styles.input}
-          value={numeroCorredor}
-          onChangeText={(text) => setNumeroCorredor(text)}
-          placeholder="Digite o número do corredor"
-          keyboardType="numeric"
-        />
+      <TextInput
+        style={styles.input}
+        value={numeroCorredor}
+        onChangeText={(text) => setNumeroCorredor(text)}
+        placeholder="Digite o número do corredor"
+        keyboardType="numeric"
+      />
 
-      <TouchableOpacity style={styles.button} onPress={buscarDados}>
+      <TouchableOpacity style={styles.button} onPress={buscarCorredorPorNumero}>
         <Text style={styles.buttonText}>Pesquisar</Text>
       </TouchableOpacity>
-      
+
+      <TouchableOpacity style={styles.button} onPress={buscarTodosCorredores}>
+        <Text style={styles.buttonText}>Listar Todos os Corredores</Text>
+      </TouchableOpacity>
+
       {/* Modal de Resultados */}
       <Modal
         animationType="slide"
@@ -153,33 +101,25 @@ export default function ClassificacaoGeral() {
                     <Text style={[styles.tableHeaderCell, styles.colPosition]}>Posição</Text>
                     <Text style={[styles.tableHeaderCell, styles.colNumber]}>Número</Text>
                     <Text style={[styles.tableHeaderCell, styles.colName]}>Nome</Text>
-                    <Text style={[styles.tableHeaderCell, styles.colAge]}>Idade</Text>
-                    <Text style={[styles.tableHeaderCell, styles.colGender]}>Sexo</Text>
-                    <Text style={[styles.tableHeaderCell, styles.colTime]}>Tempo</Text>
+                    <Text style={[styles.tableHeaderCell, styles.colTime]}>Tempo Final</Text>
                   </View>
                 )}
-                renderItem={({ item, index }) => (
+                renderItem={({ item }) => (
                   <View style={styles.tableRow}>
-                    <Text style={[styles.tableCell, styles.colPosition]}>{index + 1}</Text>
-                    <Text style={[styles.tableCell, styles.colNumber]}>{item.numero_atleta}</Text>
-                    <Text style={[styles.tableCell, styles.colName]}>{item.nome_completo_atleta}</Text>
-                    <Text style={[styles.tableCell, styles.colAge]}>{item.idade}</Text>
-                    <Text style={[styles.tableCell, styles.colGender]}>{item.sexo}</Text>
-                    <Text style={[styles.tableCell, styles.colTime]}>{item.tempo_corrida}</Text>
+                    <Text style={[styles.tableCell, styles.colPosition]}>{item.posicao}</Text>
+                    <Text style={[styles.tableCell, styles.colNumber]}>{item.numero_corredor}</Text>
+                    <Text style={[styles.tableCell, styles.colName]}>{item.nome}</Text>
+                    <Text style={[styles.tableCell, styles.colTime]}>{item.tempo_final}</Text>
                   </View>
                 )}
               />
             </ScrollView>
-
-            {/* Botões dentro do modal de resultados */}
-            <View>
-              <TouchableOpacity style={styles.button} onPress={generateCSV}>
-                <Text style={styles.buttonText}>Baixar</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.button} onPress={() => setModalVisible(false)}>
-                <Text style={styles.buttonText}>Fechar</Text>
-              </TouchableOpacity>
-            </View>
+            <TouchableOpacity style={styles.button} onPress={() => setModalVisible(false)}>
+              <Text style={styles.buttonText}>Fechar</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.button} onPress={generateCSV}>
+              <Text style={styles.buttonText}>Gerar CSV</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>

@@ -96,7 +96,7 @@ export default function Home() {
               value={userName}
               onChangeText={setUserName}
             />
-            <TouchableOpacity style={styles.button} onPress={handleNameSubmit}>
+            <TouchableOpacity style={styles.modalButton} onPress={handleNameSubmit}>
               <Text style={styles.buttonText}>Confirmar</Text>
             </TouchableOpacity>
           </View>
@@ -119,7 +119,7 @@ export default function Home() {
               value={password}
               onChangeText={setPassword}
             />
-            <TouchableOpacity style={styles.button} onPress={handlePasswordSubmit}>
+            <TouchableOpacity style={styles.modalButton} onPress={handlePasswordSubmit}>
               <Text style={styles.buttonText}>Entrar</Text>
             </TouchableOpacity>
           </View>
@@ -128,40 +128,51 @@ export default function Home() {
 
       <Image source={require('../../assets/cronometro.png')} style={styles.image} />
 
-      <TouchableOpacity
-        style={styles.button}
-        onPress={() => router.push(`/Cronometro?userName=${userName}`)}
-      >
-        <Text style={styles.buttonText}>Cronômetro</Text>
-      </TouchableOpacity>
+      <View style={styles.buttonRow}>
+        <TouchableOpacity
+          style={styles.button}
+          onPress={() => router.push(`/Cronometro?userName=${userName}`)}
+        >
+          <Icon name="timer" size={20} color="#fff" />
+          <Text style={styles.buttonText}>Cronômetro</Text>
+        </TouchableOpacity>
 
-      <TouchableOpacity
-        style={styles.button}
-        onPress={() => router.push(`/Checkin?monitor=${userName}`)}
-      >
-        <Text style={styles.buttonText}>Check in</Text>
-      </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.button}
+          onPress={() => router.push(`/Checkin?monitor=${userName}`)}
+        >
+          <Icon name="check-circle" size={20} color="#fff" />
+          <Text style={styles.buttonText}>Check in</Text>
+        </TouchableOpacity>
+      </View>
 
-      <TouchableOpacity
-        style={styles.button}
-        onPress={() => router.push('/Classificacao')}
-      >
-        <Text style={styles.buttonText}>Classificação</Text>
-      </TouchableOpacity>
+      <View style={styles.buttonRow}>
+        <TouchableOpacity
+          style={styles.button}
+          onPress={() => router.push('/Classificacao')}
+        >
+          <Icon name="stars" size={20} color="#fff" />
+          <Text style={styles.buttonText}>Classificação</Text>
+        </TouchableOpacity>
 
-      <TouchableOpacity
-        style={styles.button}
-        onPress={() => router.push('/ClassificacaoGeral')}
-      >
-        <Text style={styles.buttonText}>Classificação Geral</Text>
-      </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.button}
+          onPress={() => router.push('/ClassificacaoGeral')}
+        >
+          <Icon name="leaderboard" size={20} color="#fff" />
+          <Text style={styles.buttonText}>Classificação Geral</Text>
+        </TouchableOpacity>
+      </View>
 
-      <TouchableOpacity
-        style={styles.button}
-        onPress={() => router.push('/')}
-      >
-        <Text style={styles.buttonText}>Atualizar Dados</Text>
-      </TouchableOpacity>
+      <View style={styles.buttonRow}>
+        <TouchableOpacity
+          style={styles.button}
+          onPress={() => router.push('/')}
+        >
+          <Icon name="refresh" size={20} color="#fff" />
+          <Text style={styles.buttonText}>Atualizar Dados</Text>
+        </TouchableOpacity>
+      </View>
 
       <TouchableOpacity
         style={styles.configButton}
@@ -177,7 +188,8 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 20,
-    backgroundColor: '#F0F8FF', // Gradiente suave
+    backgroundColor: '#F0F8FF',
+    justifyContent: 'flex-start',
   },
   modalOverlay: {
     flex: 1,
@@ -193,7 +205,7 @@ const styles = StyleSheet.create({
     shadowColor: '#000',
     shadowOpacity: 0.2,
     shadowRadius: 10,
-    elevation: 5, // Para Android
+    elevation: 5,
     alignItems: 'center',
   },
   modalText: {
@@ -220,19 +232,33 @@ const styles = StyleSheet.create({
     elevation: 10,
     zIndex: 1,
   },
+  buttonRow: {
+    top: 30,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+  },
   button: {
+    width: '48%',
+    backgroundColor: '#007BFF',
+    padding: 35,
+    borderRadius: 10,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowRadius: 5,
+    elevation: 4,
+  },
+  modalButton: {
     width: '80%',
     backgroundColor: '#007BFF',
     padding: 15,
     borderRadius: 10,
     alignItems: 'center',
-    marginTop: 15,
-    marginBottom: 20,
-    alignSelf: 'center',
     shadowColor: '#000',
     shadowOpacity: 0.2,
     shadowRadius: 5,
-    elevation: 4, // Para Android
+    elevation: 4,
   },
   buttonText: {
     color: '#fff',

@@ -115,48 +115,63 @@ export default function Cronometro() {
 
   const saveData = async (index) => {
     const runnerNumber = runnerNumbers[index];
+
+    // Verifica se o número do corredor foi preenchido
     if (!runnerNumber.trim()) {
-      Alert.alert('Erro', 'Digite o número do corredor antes de salvar.');
-      return;
+        Alert.alert('Erro', 'Digite o número do corredor antes de salvar.');
+        return;
     }
-  
+
+    // Valida se o número do corredor é válido
     if (isNaN(runnerNumber) || parseInt(runnerNumber) <= 0) {
-      setResponseMessages((prevMessages) => {
-        const newMessages = [...prevMessages];
-        newMessages[index] = 'Número do corredor deve ser um número válido.';
-        return newMessages;
-      });
-      return;
-    }
-  
-    const { exists, corredor } = await checkRunnerStatus(parseInt(runnerNumber));
-    if (exists) {
-      try {
-        await updateCorredor({
-          numero_corredor: corredor.numero_corredor,
-          monitor: userName,
-          tempo_final: formatTimeToDisplay(currentTime),
-          tempo_de_atraso: corredor.tempo_de_atraso
-        });
-        console.log(`Tempo registrado: ${formatTimeToDisplay(currentTime)} para o corredor número ${runnerNumber}`);
         setResponseMessages((prevMessages) => {
-          const newMessages = [...prevMessages];
-          newMessages[index] = 'Tempo final atualizado com sucesso!';
-          return newMessages;
+            const newMessages = [...prevMessages];
+            newMessages[index] = 'Número do corredor deve ser um número válido.';
+            return newMessages;
         });
-      } catch (error) {
-        console.error('Erro ao atualizar dados:', error);
-        Alert.alert('Erro ao atualizar tempo final');
-      }
-    } else {
-      // Mensagem de erro se o número do corredor não existir
-      setResponseMessages((prevMessages) => {
-        const newMessages = [...prevMessages];
-        newMessages[index] = `Número do corredor ${runnerNumber} não encontrado.`;
-        return newMessages;
-      });
+        return;
     }
+
+    const { exists, corredor } = await checkRunnerStatus(parseInt(runnerNumber));
+
+    // Se o corredor existir, verifica o campo tempo_final
+    if (exists) {
+        if (corredor.tempo_final) {
+            setResponseMessages((prevMessages) => {
+                const newMessages = [...prevMessages];
+                newMessages[index] = `O tempo final já foi registrado: ${corredor.tempo_final}`;
+                return newMessages;
+            });
+        } else {
+            try {
+                // Atualiza o tempo final no banco de dados
+                await updateCorredor({
+                    numero_corredor: corredor.numero_corredor,
+                    monitor: userName,
+                    tempo_final: formatTimeToDisplay(currentTime),
+                    tempo_de_atraso: corredor.tempo_de_atraso
+                });
+                console.log(`Tempo final registrado: ${formatTimeToDisplay(currentTime)} para o corredor número ${runnerNumber}`);
+                setResponseMessages((prevMessages) => {
+                    const newMessages = [...prevMessages];
+                    newMessages[index] = 'Tempo final atualizado com sucesso!';
+                    return newMessages;
+                });
+            } catch (error) {
+                console.error('Erro ao atualizar tempo final:', error);
+                Alert.alert('Erro ao atualizar tempo final.');
+            }
+        }
+    } else {
+        setResponseMessages((prevMessages) => {
+            const newMessages = [...prevMessages];
+            newMessages[index] = `Número do corredor ${runnerNumber} não encontrado.`;
+            return newMessages;
+        });
+    }
+    setRunnerNumbers(['', '', '', '']); // Limpa os números dos corredores
   };
+
   const openDelayedRunners = async () =>{
     setRunnerNumbers(['', '', '', '']); // Limpa os números dos corredores
     setResponseMessages(['', '', '', '']); // Limpa as mensagens de resposta  
@@ -168,59 +183,84 @@ export default function Cronometro() {
     setModalVisible(false);// Abre o modal de Partida Atrasada
     setDelayedRunnerNumbers(['', '', '', '']); // Limpa os números atrasados
   }
-  const saveDelayedRunners = async () => {
-    const delayedData = delayedRunnerNumbers.map((number) => ({
-      numero_atleta: parseInt(number),
-    }));
+
+  const saveDelayedRunners = async (index) => {
+    const runnerNumber = delayedRunnerNumbers[index];
   
-    const invalidNumbers = delayedData.filter(item => isNaN(item.numero_atleta) || item.numero_atleta <= 0);
-    if (invalidNumbers.length < 0) {
-      Alert.alert('Erro', 'Todos os números dos corredores atrasados devem ser válidos.');
+    // Verifica se o número do corredor foi informado
+    if (!runnerNumber.trim()) {
+      Alert.alert('Erro', 'Digite o número do corredor antes de salvar.');
       return;
     }
   
-    const newResponseMessages = [...responseMessages]; // Copia o estado atual das mensagens
+    // Verifica se o número do corredor é válido
+    if (isNaN(runnerNumber) || parseInt(runnerNumber) <= 0) {
+      setResponseMessages((prevMessages) => {
+        const newMessages = [...prevMessages];
+        newMessages[index] = 'Número do corredor deve ser um número válido.';
+        return newMessages;
+      });
+      return;
+    }
   
-    for (let i = 0; i < delayedData.length; i++) {
-      const runner = delayedData[i];
-      if (!runner.numero_atleta) continue; // Ignora entradas vazias
+    // Verifica se o corredor existe
+    const { exists, corredor } = await checkRunnerStatus(parseInt(runnerNumber));
   
-      const { exists, corredor } = await checkRunnerStatus(runner.numero_atleta);
-      if (exists) {
+    if (exists) {
+      // Verifica se o corredor já tem tempo de atraso registrado
+      if (corredor.tempo_de_atraso) {
+        setResponseMessages((prevMessages) => {
+          const newMessages = [...prevMessages];
+          newMessages[index] = `O tempo de atraso já foi registrado: ${corredor.tempo_de_atraso}`;
+          // Limpa os números de corredores atrasados após a operação
+          setDelayedRunnerNumbers(['', '', '', '']);
+          return newMessages;
+        });
+      } else {
+        // Verifica se o tempo final já foi registrado
+        if (corredor.tempo_final) {
+          setResponseMessages((prevMessages) => {
+            const newMessages = [...prevMessages];
+            newMessages[index] = `O tempo final já foi registrado: ${corredor.tempo_final}`;
+            setDelayedRunnerNumbers(['', '', '', '']);
+            return newMessages;
+          });
+          return; // Não salva se já houver tempo final
+        }
+  
         try {
+          // Atualiza o tempo de atraso
           await updateCorredor({
             numero_corredor: corredor.numero_corredor,
             monitor: userName,
             tempo_final: corredor.tempo_final,
             tempo_de_atraso: formatTimeToDisplay(currentTime),
           });
-          console.log(`Tempo de atraso registrado: ${formatTimeToDisplay(currentTime)} para o corredor número ${runner.numero_atleta}`);
-          newResponseMessages[i] = `Tempo de atraso registrado com sucesso para o corredor ${runner.numero_atleta}.`;
+  
+          // Mensagem de sucesso
+          setResponseMessages((prevMessages) => {
+            const newMessages = [...prevMessages];
+            newMessages[index] = 'Tempo de atraso atualizado com sucesso!';
+            return newMessages;
+          });
         } catch (error) {
-          console.error('Erro ao atualizar dados:', error);
-          newResponseMessages[i] = `Erro ao registrar tempo de atraso para o corredor ${runner.numero_atleta}.`;
+          console.error('Erro ao atualizar tempo de atraso:', error);
+          Alert.alert('Erro ao atualizar tempo de atraso.');
         }
-      } else {
-        console.log(`Número não encontrado: ${runner.numero_atleta}`);
-        newResponseMessages[i] = `Número do corredor ${runner.numero_atleta} não encontrado.`;
       }
+    } else {
+      // Mensagem caso o corredor não seja encontrado
+      setResponseMessages((prevMessages) => {
+        const newMessages = [...prevMessages];
+        newMessages[index] = `Número do corredor ${runnerNumber} não encontrado.`;
+        return newMessages;
+      });
     }
   
-    setResponseMessages(newResponseMessages); // Atualiza as mensagens
-    setRunnerNumbers(['', '', '', '']); // Limpa os números dos corredores
-    setDelayedRunnerNumbers(['', '', '', '']); // Limpa os números atrasados
-  };
+    // Limpa os números de corredores atrasados após a operação
+    setDelayedRunnerNumbers(['', '', '', '']);
+  };  
   
-  // Função para exibir todos os valores no banco de dados
-  const displayAllCorredores = async () => {
-    try {
-      const corredores = await getAllCorredores();
-      console.log('Valores no banco de dados:', corredores);
-    } catch (error) {
-      console.error('Erro ao buscar todos os corredores:', error);
-    }
-  };
-
   return (
     <View style={stylescronometro.container}>
       {/* Botão para voltar para a tela anterior */}
@@ -289,7 +329,7 @@ export default function Cronometro() {
                     }}
                     keyboardType="numeric"
                   />
-                  <TouchableOpacity style={stylescronometro.saveButton} onPress={saveDelayedRunners}>
+                  <TouchableOpacity style={stylescronometro.saveButton} onPress={() => saveDelayedRunners(index)}>
                     <Text style={stylescronometro.saveButtonText}>Salvar</Text>
                   </TouchableOpacity>
                 </View>

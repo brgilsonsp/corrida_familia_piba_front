@@ -1,12 +1,13 @@
 import React, { useState, useEffect,useRef, useCallback } from 'react';
 import { View, Text, TextInput, TouchableOpacity, Alert, StyleSheet } from 'react-native';
-import Icon from 'react-native-vector-icons/MaterialIcons';
+import Icon from 'react-native-vector-icons/FontAwesome';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import useServerTime from './hook/useServerTime'; // Certifique-se de que o hook está correto
 
 const ConfiguracaoScreen = () => {
   const router = useRouter();
+  const [activeTab, setActiveTab] = useState('editarUrl');  // Estado para controlar a aba ativa
   const defaultUrl = 'https://hufd66cq2i';
   const [urlBase, setUrlBase] = useState(defaultUrl);
   const { serverTime } = useServerTime();
@@ -122,7 +123,6 @@ const ConfiguracaoScreen = () => {
         }
       };
     }, [updateTime]);
-  
 
   // Valida se a hora inserida está no formato correto
   const validateTimeFormat = (timeStr) => {
@@ -130,119 +130,177 @@ const ConfiguracaoScreen = () => {
     return regex.test(timeStr);
   };
 
-
   return (
     <View style={styles.container}>
       {/* Botão para voltar */}
-      <TouchableOpacity onPress={() => router.back()}>
-        <Icon name="arrow-back" size={30} color="#000" />
+      <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+        <Icon name="arrow-left" size={24} color="#000" />
       </TouchableOpacity>
 
-      <Text style={styles.label}>Editar URL base:</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="Digite a URL base (ex: https://192.168.0.5:9111)"
-        value={urlBase}
-        onChangeText={setUrlBase}
-      />
+      {/* Conteúdo da página */}
+      <View style={styles.content}>
+        {activeTab === 'editarUrl' && (
+          <View style={styles.tabContent}>
+            <Text style={styles.label}>Editar URL base:</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Digite a URL base (ex: https://192.168.0.5:9111)"
+              value={urlBase}
+              onChangeText={setUrlBase}
+            />
+            <TouchableOpacity style={styles.button} onPress={handleSaveUrlBase}>
+              <Text style={styles.buttonText}>Salvar URL</Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
-      <TouchableOpacity style={styles.button} onPress={handleSaveUrlBase}>
-        <Text style={styles.buttonText}>Salvar URL</Text>
-      </TouchableOpacity>
+        {activeTab === 'cronometro' && (
+          <View style={styles.tabContent}>
+            <Text style={styles.label}>Cronômetro atual:</Text>
+            <Text style={styles.timer}>
+              {serverTime ? formatTimeToDisplay(currentTime) : '00:00:00.00'}
+            </Text>
+            <TouchableOpacity style={styles.button} onPress={handleSaveCurrentTime}>
+              <Text style={styles.buttonText}>Salvar Cronômetro</Text>
+            </TouchableOpacity>
+            <Text style={styles.label}>Horário salvo: {formatTimeToDisplay(savedTime)}</Text>
+          </View>
+        )}
 
-      <Text style={styles.label}>Cronômetro atual:</Text>
-      {/* Exibir "00:00:00.00" até o serverTime aparecer */}
-      <Text style={styles.timer}>
-        {serverTime ? formatTimeToDisplay(currentTime) : '00:00:00.00'}
-      </Text>
+        {activeTab === 'horaEspecifica' && (
+          <View style={styles.tabContent}>
+            <Text style={styles.label}>Digite um horário específico:</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Formato: hh:mm:ss:ms"
+              value={inputHoraEspecifica}
+              onChangeText={setInputHoraEspecifica}
+            />
+            <TouchableOpacity style={styles.button} onPress={handleSaveInputTime}>
+              <Text style={styles.buttonText}>Salvar Horário</Text>
+            </TouchableOpacity>
+            <Text style={styles.label}>Horário salvo: {formatTimeToDisplay(savedTime)}</Text>
+          </View>
+        )}
+      </View>
 
-      {/* Botão para salvar o cronômetro */}
-      <TouchableOpacity style={styles.button} onPress={handleSaveCurrentTime}>
-        <Text style={styles.buttonText}>Salvar Cronômetro</Text>
-      </TouchableOpacity>
-
-      <Text style={styles.label}>Digite um horário específico:</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="Formato: hh:mm:ss:ms"
-        value={inputHoraEspecifica}
-        onChangeText={setInputHoraEspecifica}
-      />
-
-      {/* Botão para salvar hora específica */}
-      <TouchableOpacity style={styles.button} onPress={handleSaveInputTime}>
-        <Text style={styles.buttonText}>Salvar Horário</Text>
-      </TouchableOpacity>
-
-      <Text style={styles.label}>
-        Horário salvo: {formatTimeToDisplay(savedTime)}
-      </Text>
+      {/* Menu de abas na parte inferior */}
+      <View style={styles.tabs}>
+        <TouchableOpacity
+          style={[styles.tab, activeTab === 'editarUrl' && styles.activeTab]}
+          onPress={() => setActiveTab('editarUrl')}
+        >
+          <Icon name="edit" size={20} color={activeTab === 'editarUrl' ? '#fff' : '#34495E'} />
+          <Text style={[styles.tabText, activeTab === 'editarUrl' && styles.activeTabText]}>Editar URL</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.tab, activeTab === 'cronometro' && styles.activeTab]}
+          onPress={() => setActiveTab('cronometro')}
+        >
+          <Icon name="clock-o" size={20} color={activeTab === 'cronometro' ? '#fff' : '#34495E'} />
+          <Text style={[styles.tabText, activeTab === 'cronometro' && styles.activeTabText]}>Cronômetro</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.tab, activeTab === 'horaEspecifica' && styles.activeTab]}
+          onPress={() => setActiveTab('horaEspecifica')}
+        >
+          <Icon name="calendar" size={20} color={activeTab === 'horaEspecifica' ? '#fff' : '#34495E'} />
+          <Text style={[styles.tabText, activeTab === 'horaEspecifica' && styles.activeTabText]}>Hora</Text>
+          <Text style={[styles.tabText, activeTab === 'horaEspecifica' && styles.activeTabText]}>Específica</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 };
 
-export default ConfiguracaoScreen;
-
 const styles = StyleSheet.create({
-  // Contêiner principal
   container: {
     flex: 1,
+    backgroundColor: '#F0F8FF',
+    justifyContent: 'space-between',
     padding: 20,
-    backgroundColor: '#F0F8FF', // Fundo suave azul claro
   },
-  // Estilo para os rótulos
+  backButton: {
+    marginTop: 10,
+    marginBottom: 20,
+  },
+  content: {
+    flex: 1,
+  },
+  tabs: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+  },
+  tab: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 12,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 1, // Bordas arredondadas
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    borderWidth: 0.2, // Borda ao redor da aba
+    borderColor: '#DDE6ED',
+  },
+  activeTab: {
+    backgroundColor: '#007BFF', // Cor de fundo quando a aba está ativa
+    elevation: 5, // Sombra para dar um efeito de profundidade
+  },
+  activeTabText: {
+    color: '#fff', // Texto branco quando a aba está ativa
+  },
+  tabText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#34495E',
+    textAlign: 'center', // Centraliza o texto
+  },
+  tabContent: {
+    marginTop: 60,
+  },
   label: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#34495E', // Azul escuro
+    color: '#34495E',
     marginBottom: 10,
   },
-  // Estilo geral para os botões
   button: {
     width: '100%',
     backgroundColor: '#007BFF',
     paddingVertical: 15,
-    borderRadius: 10, // Bordas mais arredondadas
+    borderRadius: 10,
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 5, // Sombra para Android
     marginTop: 10,
     marginBottom: 20,
   },
-  // Estilo para o texto do botão
   buttonText: {
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
-    textTransform: 'uppercase', // Texto em maiúsculas
+    textTransform: 'uppercase',
   },
-  // Estilo para os campos de entrada
   input: {
     width: '100%',
     height: 50,
-    backgroundColor: '#FFFFFF', // Fundo branco
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: '#DDE6ED', // Borda cinza claro
+    borderColor: '#DDE6ED',
     borderRadius: 10,
     paddingHorizontal: 15,
     marginBottom: 15,
     fontSize: 16,
     color: '#34495E',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2, // Sombra para Android
   },
-  // Estilo para o texto do temporizador
   timer: {
     fontSize: 48,
     fontWeight: 'bold',
-    color: '#007BFF', 
+    color: '#007BFF',
     marginBottom: 20,
     textAlign: 'center',
   },
 });
+
+export default ConfiguracaoScreen;

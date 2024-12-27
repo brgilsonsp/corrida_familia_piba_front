@@ -10,61 +10,86 @@ import * as Sharing from 'expo-sharing'; // Para compartilhar arquivos
 
 export default function ClassificacaoGeral() {
   const router = useRouter();
-  const [query, setQuery] = useState('');
-  const [number, setNumber] = useState('');
   const [sexo, setSexo] = useState('Todos');
   const [faixaEtaria, setFaixaEtaria] = useState('Todas');
   const [categoria, setCategoria] = useState('Todas');
   const [results, setResults] = useState([]);
-  const [expandedIndex, setExpandedIndex] = useState(null);
   const [apiUrlBase, setApiUrlBase] = useState('');
+  const [segmentacao, setSegmentacao] = useState({ sexo: [], range_idade: [], modalidade: [] }); // Novo estado para segmentação
   const [modalVisible, setModalVisible] = useState(false);
-  const [nameSuggestions, setNameSuggestions] = useState<Corredor[]>([]);
-  const [isNameEditable, setIsNameEditable] = useState(true);
-  const [isNumberEditable, setIsNumberEditable] = useState(true);
-
+  const [nomeCorredor, setNomeCorredor] = useState('');
+  const [numeroCorredor, setNumeroCorredor] = useState('');
+  
   useEffect(() => {
     const loadUrlBase = async () => {
       const savedUrlBase = await AsyncStorage.getItem('apiUrlBase');
       if (savedUrlBase) setApiUrlBase(savedUrlBase);
     };
     loadUrlBase();
-  }, []);
+
+    // Buscar segmentação da API
+    const fetchSegmentacao = async () => {
+      try {
+        const response = await axios.get(`${apiUrlBase}.execute-api.us-east-1.amazonaws.com/prd/segmentacao`);
+        if (response.data) {
+          setSegmentacao(response.data); // Atualiza com os dados da segmentação
+        }
+      } catch (error) {
+        console.error('Erro ao buscar dados de segmentação:', error);
+      }
+    };
+
+    if (apiUrlBase) {
+      fetchSegmentacao();
+    }
+  }, [apiUrlBase]); // O efeito depende da base URL da API
 
   const buscarDados = async () => {
     if (!apiUrlBase) {
       console.error('URL base da API não foi definida');
       return;
     }
-
-    const fullUrl = `${apiUrlBase}.execute-api.us-east-1.amazonaws.com/corre-familia/classificacoes`;
-
+  
+    let url = `${apiUrlBase}.execute-api.us-east-1.amazonaws.com/prd/classificacao`;
+  
+    // Adiciona os parâmetros de acordo com os filtros selecionados
+    let params = {};
+  
+    if (sexo !== 'Todos') params.sexo = sexo;
+    if (faixaEtaria !== 'Todas') params.faixa_etaria = faixaEtaria;
+    if (categoria !== 'Todas') params.modalidade = categoria;
+    if (nomeCorredor) params.nome_atleta = nomeCorredor;  // Corrigido para o campo correto "nome_atleta"
+    if (numeroCorredor) params.numero_peito = numeroCorredor;  // Corrigido para o campo correto "numero_peito"
+  
+    // Converte os parâmetros para uma string de query
+    const queryParams = new URLSearchParams(params).toString();
+    if (queryParams) {
+      url += `?${queryParams}`;
+    }
+  
     try {
-      const response = await axios.get(fullUrl, {
-        params: {
-          sexo: sexo,
-          faixa_etaria: faixaEtaria,
-          categoria: categoria,
-          nome_corredor: nomeCorredor || undefined, // Apenas envia se o valor existir
-          numero_corredor: numeroCorredor || undefined, // Apenas envia se o valor existir
-        },
-      });
-      setResults(response.data.dados);
-      await AsyncStorage.setItem('searchResults', JSON.stringify(response.data.dados)); // Armazenar resultados
+      const response = await axios.get(url);
+  
+      // Verifica se a resposta contém dados válidos
+      if (response.data && Array.isArray(response.data)) {
+        setResults(response.data);  // Atualiza com os dados retornados
+        await AsyncStorage.setItem('searchResults', JSON.stringify(response.data)); // Armazenar resultados
+      } else {
+        console.error('Nenhum dado válido encontrado');
+        await AsyncStorage.removeItem('searchResults'); // Remove dados inválidos
+      }
+  
       setModalVisible(true); // Abre o modal quando os dados forem carregados
     } catch (error) {
       console.error('Erro ao buscar dados:', error);
     }
   };
-
-  const toggleExpand = (index) => {
-    setExpandedIndex(expandedIndex === index ? null : index);
-  };
+  
 
   const generateCSV = () => {
     const header = 'Posição,Número,Nome,Idade,Sexo,Tempo\n';
     const rows = results.map(item => 
-      `${item.position},${item.numero_atleta},${item.nome_completo_atleta},${item.idade},${item.sexo},${item.tempo_corrida}\n`
+      `${item.position},${item.numero_peito},${item.nome_atleta},${item.idade},${item.sexo},${item.tempo_corrida}\n`
     ).join('');
     const csvContent = header + rows;
     const fileUri = FileSystem.documentDirectory + 'resultados.csv';
@@ -80,98 +105,54 @@ export default function ClassificacaoGeral() {
         <Icon name="arrow-left" size={24} color="#000" />
       </TouchableOpacity>
 
-      <Text style={styles.title}>Classificação Geral</Text>
+      <Text style={styles.title}>Classificação geral</Text>
 
       <Text style={styles.label}>Selecione o Sexo:</Text>
-      <View style={styles.pickerContainer}>  {/* Contêiner com borda */}
+      <View style={styles.pickerContainer}>
         <Picker selectedValue={sexo} style={styles.picker} onValueChange={(itemValue) => setSexo(itemValue)}>
           <Picker.Item label="Todos" value="Todos" />
-          <Picker.Item label="Masculino" value="Masculino" />
-          <Picker.Item label="Feminino" value="Feminino" />
+          {segmentacao.sexo.map((sex, index) => (
+            <Picker.Item key={index} label={sex} value={sex} />
+          ))}
         </Picker>
       </View>
 
       <Text style={styles.label}>Faixa Etária:</Text>
-      <View style={styles.pickerContainer}>  {/* Contêiner com borda */}
+      <View style={styles.pickerContainer}>
         <Picker selectedValue={faixaEtaria} style={styles.picker} onValueChange={(itemValue) => setFaixaEtaria(itemValue)}>
           <Picker.Item label="Todas" value="Todas" />
-          <Picker.Item label="6 - 7" value="6 - 7" />
-          <Picker.Item label="8 - 12" value="8 - 12" />
-          <Picker.Item label="13 - 15" value="13 - 15" />
-          <Picker.Item label="16 - 20" value="16 - 20" />
-          <Picker.Item label="21 - 30" value="21 - 30" />
-          <Picker.Item label="31 - 40" value="31 - 40" />
-          <Picker.Item label="41 - 50" value="41 - 50" />
-          <Picker.Item label="51 - 60" value="51 - 60" />
-          <Picker.Item label="61+" value="61+" />
+          {segmentacao.range_idade.map((ageRange, index) => (
+            <Picker.Item key={index} label={ageRange} value={ageRange} />
+          ))}
         </Picker>
       </View>
 
       <Text style={styles.label}>Categoria:</Text>
-      <View style={styles.pickerContainer}>  {/* Contêiner com borda */}
+      <View style={styles.pickerContainer}>
         <Picker selectedValue={categoria} style={styles.picker} onValueChange={(itemValue) => setCategoria(itemValue)}>
           <Picker.Item label="Todas" value="Todas" />
-          <Picker.Item label="Caminhada" value="Caminhada" />
-          <Picker.Item label="Corrida" value="Corrida" />
+          {segmentacao.modalidade.map((mod, index) => (
+            <Picker.Item key={index} label={mod} value={mod} />
+          ))}
         </Picker>
       </View>
 
-      {/* Campo Nome */}
-      <View style={styles.margem}>
-        <Text style={styles.label}>Nome do Corredor</Text>
-        <View>
-          <TextInput
-            style={styles.input}
-            value={query}
-            onChangeText={(text) => {
-              if (isNameEditable) {
-                setQuery(text);
-                searchForCorredores(text, 'nome');
-              }
-            }}
-            placeholder="Digite o nome"
-            editable={isNameEditable}
-          />
-          <TouchableOpacity onPress={() => setIsNameEditable(true)}>
-            <Icon name="pencil" size={20} color="#000" />
-          </TouchableOpacity>
-        </View>
-        {nameSuggestions.length > 0 && (
-          <View style={styles.suggestionsContainer}>
-            <FlatList
-              data={nameSuggestions}
-              keyExtractor={(item) => item.id_atleta}
-              renderItem={({ item }) => (
-                <TouchableOpacity onPress={() => handleSelectItem(item)}>
-                  <Text style={styles.suggestionItem}>{item.nome} - {item.documento}</Text>
-                </TouchableOpacity>
-              )}
-            />
-          </View>
-        )}
-      </View>
+      <Text style={styles.label}>Nome do Corredor:</Text>
+        <TextInput
+          style={styles.input}
+          value={nomeCorredor}
+          onChangeText={(text) => setNomeCorredor(text)}
+          placeholder="Digite o nome do corredor"
+        />
 
-      {/* Campo Número do Corredor */}
-      <View style={styles.margem}>
-        <Text style={styles.label}>Número do Corredor</Text>
-        <View>
-          <TextInput
-            style={styles.input}
-            value={number}
-            onChangeText={(text) => {
-              if (isNumberEditable) {
-                setNumber(text);
-                searchForCorredores(text, 'numero_peito');
-              }
-            }}
-            placeholder="Digite o número do corredor"
-            editable={isNumberEditable}
-          />
-          <TouchableOpacity onPress={() => setIsNumberEditable(true)}>
-            <Icon name="pencil" size={20} color="#000" />
-          </TouchableOpacity>
-        </View>
-      </View>
+      <Text style={styles.label}>Número do Corredor:</Text>
+        <TextInput
+          style={styles.input}
+          value={numeroCorredor}
+          onChangeText={(text) => setNumeroCorredor(text)}
+          placeholder="Digite o número do corredor"
+          keyboardType="numeric"
+        />
 
       <TouchableOpacity style={styles.button} onPress={buscarDados}>
         <Text style={styles.buttonText}>Pesquisar</Text>
@@ -204,8 +185,8 @@ export default function ClassificacaoGeral() {
                 renderItem={({ item, index }) => (
                   <View style={styles.tableRow}>
                     <Text style={[styles.tableCell, styles.colPosition]}>{index + 1}</Text>
-                    <Text style={[styles.tableCell, styles.colNumber]}>{item.numero_atleta}</Text>
-                    <Text style={[styles.tableCell, styles.colName]}>{item.nome_completo_atleta}</Text>
+                    <Text style={[styles.tableCell, styles.colNumber]}>{item.numero_peito}</Text>
+                    <Text style={[styles.tableCell, styles.colName]}>{item.nome_atleta}</Text>
                     <Text style={[styles.tableCell, styles.colAge]}>{item.idade}</Text>
                     <Text style={[styles.tableCell, styles.colGender]}>{item.sexo}</Text>
                     <Text style={[styles.tableCell, styles.colTime]}>{item.tempo_corrida}</Text>
@@ -213,16 +194,12 @@ export default function ClassificacaoGeral() {
                 )}
               />
             </ScrollView>
-
-            {/* Botões dentro do modal de resultados */}
-            <View>
-              <TouchableOpacity style={styles.button} onPress={generateCSV}>
-                <Text style={styles.buttonText}>Baixar</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.button} onPress={() => setModalVisible(false)}>
-                <Text style={styles.buttonText}>Fechar</Text>
-              </TouchableOpacity>
-            </View>
+            <TouchableOpacity style={styles.button} onPress={() => setModalVisible(false)}>
+              <Text style={styles.buttonText}>Fechar</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.button} onPress={generateCSV}>
+              <Text style={styles.buttonText}>Gerar CSV</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>
@@ -365,24 +342,4 @@ const styles = StyleSheet.create({
 
   // Estilo para a coluna "Tempo" com largura fixa
   colTime: { width: 100 }, // Define largura fixa de 100 para a coluna "Tempo"
-
-  suggestionsContainer: {
-    position: 'absolute',
-    top: 75, // Altere este valor conforme necessário
-    left: 20,
-    right: 20,
-    backgroundColor: 'white',
-    borderRadius: 8,
-    elevation: 5, // Sombra para dar efeito de "modal"
-    zIndex: 1, // Garante que este container esteja acima dos outros elementos
-    maxHeight: 200, // Limita a altura da lista de sugestões
-  },
-  suggestionItem: {
-    padding: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#ccc',
-  },
-  margem:{
-    marginBottom: 10,
-  },  
 });
