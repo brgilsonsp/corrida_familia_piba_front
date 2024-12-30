@@ -4,11 +4,13 @@ import Icon from 'react-native-vector-icons/FontAwesome';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import useServerTime from './hook/useServerTime'; // Certifique-se de que o hook está correto
+import  { clearDatabase } from './database/initializeDatabase'
 
 const ConfiguracaoScreen = () => {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState('editarUrl');  // Estado para controlar a aba ativa
   const defaultUrl = 'https://hufd66cq2i';
+  const [userName, setUserName] = useState('');
   const [urlBase, setUrlBase] = useState(defaultUrl);
   const { serverTime } = useServerTime();
   const [currentTime, setCurrentTime] = useState(0);
@@ -17,6 +19,21 @@ const ConfiguracaoScreen = () => {
   const animationFrameId = useRef<number | null>(null);  // Ref para armazenar o ID do requestAnimationFrame
   const lastTimeRef = useRef(0);  // Ref para armazenar o tempo do último quadro
   const startTimeRef = useRef(0);  // Ref para armazenar o tempo inicial do cronômetro
+
+  useEffect(() => {
+    const fetchUserName = async () => {
+      try {
+        const storedUserName = await AsyncStorage.getItem('userName');
+        if (storedUserName) {
+          setUserName(storedUserName);
+        }
+      } catch (error) {
+        console.error('Erro ao carregar userName do AsyncStorage', error);
+      }
+    };
+
+    fetchUserName();
+  }, []);
 
   // Carregar URL base salvo do AsyncStorage
   useEffect(() => {
@@ -42,10 +59,40 @@ const ConfiguracaoScreen = () => {
     }
   };
 
-  const handleSaveCurrentTime = () => {
-    setSavedTime(currentTime);
-    Alert.alert('Cronômetro salvo com sucesso!', formatTimeToDisplay(currentTime));
-  };
+  const handleSaveCurrentTime = async () => {
+    try {
+      const formattedTime = formatTimeToDisplay(currentTime);
+      setSavedTime(currentTime);
+  
+      // Criando o corpo do JSON
+      const payload = {
+        hora: formattedTime,
+        monitor: userName,
+      };
+  
+      // Realizando a requisição POST
+      const response = await fetch(`${urlBase}.execute-api.us-east-1.amazonaws.com/prd/cronometragem/largada_geral`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+  
+      // Verificando o status da resposta
+      if (response.ok) {
+        Alert.alert('Cronômetro salvo com sucesso!', `Hora: ${formattedTime}`);
+        console.log('Cronômetro salvo com sucesso!', `Hora: ${formattedTime}`)
+      } else {
+        const errorData = await response.json();
+        Alert.alert('Erro ao salvar o cronômetro', errorData.message || 'Erro desconhecido');
+        console.log('Erro ao salvar o cronômetro', errorData.message || 'Erro desconhecido');
+      }
+    } catch (error) {
+      console.error('Erro ao salvar o cronômetro:', error);
+      Alert.alert('Erro', 'Ocorreu um erro ao tentar salvar o cronômetro.');
+    }
+  }; 
 
   const handleSaveInputTime = () => {
     if (validateTimeFormat(inputHoraEspecifica)) {
@@ -70,7 +117,7 @@ const ConfiguracaoScreen = () => {
       const hours = String(Math.floor(totalSeconds / 3600)).padStart(2, '0');
       const minutes = String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, '0');
       const seconds = String(totalSeconds % 60).padStart(2, '0');
-      const msString = String(milliseconds).padStart(2, '0');
+      const msString = String(milliseconds).padStart(2, '0') + '0';
       return `${hours}:${minutes}:${seconds}.${msString}`;
     }, []);
   
@@ -130,6 +177,34 @@ const ConfiguracaoScreen = () => {
     return regex.test(timeStr);
   };
 
+  const handleClearDatabase = async () => {
+    // Exibir alerta de confirmação
+    Alert.alert(
+      'Confirmação',
+      'Tem certeza que deseja limpar o banco de dados?',
+      [
+        {
+          text: 'Não',
+          onPress: () => console.log('Banco de dados não foi limpo'),
+          style: 'cancel', // Estilo para o botão "Não" (como botão de cancelamento)
+        },
+        {
+          text: 'Sim',
+          onPress: async () => {
+            try {
+              await clearDatabase();  // Limpar o banco de dados
+              Alert.alert('Sucesso', 'Banco de dados limpo com sucesso!');
+            } catch (error) {
+              Alert.alert('Erro', 'Não foi possível limpar a base de dados.');
+            }
+          },
+        },
+      ],
+      { cancelable: true }  // Permitir que o alerta seja fechado ao clicar fora
+    );
+  };
+  
+
   return (
     <View style={styles.container}>
       {/* Botão para voltar */}
@@ -182,6 +257,14 @@ const ConfiguracaoScreen = () => {
             <Text style={styles.label}>Horário salvo: {formatTimeToDisplay(savedTime)}</Text>
           </View>
         )}
+        {activeTab === 'bancoDeDados' && (
+          <View style={styles.tabContent}>
+            <Text style={styles.label}>Alterar base de dados: </Text>
+            <TouchableOpacity style={styles.button} onPress={handleClearDatabase}>
+              <Text style={styles.buttonText}>Limpar Banco de dados</Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </View>
 
       {/* Menu de abas na parte inferior */}
@@ -207,6 +290,12 @@ const ConfiguracaoScreen = () => {
           <Icon name="calendar" size={20} color={activeTab === 'horaEspecifica' ? '#fff' : '#34495E'} />
           <Text style={[styles.tabText, activeTab === 'horaEspecifica' && styles.activeTabText]}>Hora</Text>
           <Text style={[styles.tabText, activeTab === 'horaEspecifica' && styles.activeTabText]}>Específica</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.tab, activeTab === 'bancoDeDados' && styles.activeTab]}
+          onPress={() => setActiveTab('bancoDeDados')}>
+          <Icon name="database" size={20} color={activeTab === 'bancoDeDados' ? '#fff' : '#34495E'} />
+          <Text style={[styles.tabText, activeTab === 'bancoDeDados' && styles.activeTabText]}>Banco de dados</Text>
         </TouchableOpacity>
       </View>
     </View>

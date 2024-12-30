@@ -47,8 +47,9 @@ export async function insertCorredor(data: Cronometro) {
         `SELECT 1 FROM corredor WHERE numero_corredor = ?`,
         [data.numero_corredor]
       );
-    
-      if (existingCorredor.length > 0) {
+
+      // Verifica se a variável existingCorredor é uma lista e não é undefined
+      if (Array.isArray(existingCorredor) && existingCorredor.length > 0) {
         Alert.alert('Erro ao inserir dados', 'Número de corredor já existe');
       } else {
         // Inserir dados do corredor
@@ -79,10 +80,11 @@ export async function getAllCorredores(): Promise<Cronometro[]> {
   try {
     const allRows = await db.getAllAsync('SELECT * FROM corredor');
     console.log('Corredores:', allRows);
-    return allRows as Cronometro[]; // Casting para o tipo esperado
+    // Verifica se allRows é um array e retorna um array válido
+    return Array.isArray(allRows) ? allRows : [];
   } catch (error) {
     console.error('Erro ao buscar corredores:', error);
-    return [];
+    return []; // Retorna um array vazio em caso de erro
   } finally {
     db.closeAsync(); // Fechar o banco após a execução
   }
@@ -96,7 +98,8 @@ export async function getCorredorByNumber(numero_corredor: number): Promise<Cron
       'SELECT * FROM corredor WHERE numero_corredor = ?',
       [numero_corredor]
     );
-    return result.length > 0 ? result[0] as Cronometro : null; // Casting para o tipo esperado
+    // Verifica se o resultado existe e não é vazio
+    return Array.isArray(result) && result.length > 0 ? result[0] as Cronometro : null;
   } catch (error) {
     console.error('Erro ao buscar corredor:', error);
     return null;
@@ -116,7 +119,8 @@ export async function updateCorredor(data: Cronometro) {
         [data.numero_corredor]
       );
     
-      if (existingCorredor.length > 0) {
+      // Verifica se a variável existingCorredor é uma lista válida
+      if (Array.isArray(existingCorredor) && existingCorredor.length > 0) {
         const corredor = existingCorredor[0];
         if (corredor.tempo_final && corredor.tempo_de_atraso) {
           Alert.alert('Erro ao atualizar dados', 'Tempos já preenchidos');
@@ -149,42 +153,59 @@ export async function updateCorredor(data: Cronometro) {
   }
 }
 
+// Função para limpar a base de dados
+export async function clearDatabase() {
+  const db = await openDatabase(); // Abre a conexão com o banco de dados
+  try {
+    await db.runAsync('DELETE FROM corredor'); // Remove todos os registros da tabela
+    Alert.alert('Sucesso', 'Todos os registros foram removidos com sucesso!');
+  } catch (error) {
+    console.error('Erro ao limpar a base de dados:', error);
+    Alert.alert('Erro', 'Ocorreu um erro ao limpar a base de dados.');
+  } finally {
+    db.closeAsync(); // Fecha a conexão com o banco
+  }
+}
+
 export default async function searchCorredores(
   numero_corredor?: number // Parâmetro opcional para filtrar por número de corredor
-): Promise<(Cronometro & { posicao: number })[]> {
+): Promise<(Cronometro & { posicao: number; tempo_atraso?: string | undefined })[]> {
   const db = await openDatabase(); // Abertura da conexão com o banco de dados
   try {
-    let query = 'SELECT * FROM corredor';
-    const results = await db.getAllAsync(query); // Executa a query no banco de dados sem filtros para pegar todos os corredores
+    const query = 'SELECT * FROM corredor';
+    const results = (await db.getAllAsync(query)) as Cronometro[]; // Tipar explicitamente o retorno da consulta
 
-    // Função para converter tempo no formato 'HH:MM:SS.MS' para milissegundos
-    const timeToMilliseconds = (time: string | null) => {
-      if (!time) return Infinity; // Se não houver tempo, considera um tempo "infinito" (como não válido)
-      const [hours, minutes, seconds] = time.split(':').map(Number);
-      const [secs, ms] = seconds.toString().split('.').map(Number);
-      return (hours * 3600 + minutes * 60 + secs) * 1000 + (ms || 0);
-    };
-
-    // Ordenar os resultados com base no tempo convertido para milissegundos
-    const sortedResults = results.sort((a: Cronometro, b: Cronometro) => {
+    // Garantir que results seja um array válido
+    const sortedResults = Array.isArray(results) ? results.sort((a, b) => {
       const timeA = timeToMilliseconds(a.tempo_final ?? '');
       const timeB = timeToMilliseconds(b.tempo_final ?? '');
       return timeA - timeB; // Ordena de menor (melhor tempo) para maior (pior tempo)
-    });
+    }) : [];
 
-    // Atribuir posições com base na ordenação
-    sortedResults.forEach((corredor, index) => {
-      corredor.posicao = index + 1; // A posição começa de 1
+    // Atribuir posições e calcular o tempo de atraso
+    const enhancedResults = sortedResults.map((corredor, index) => {
+      const tempo_atraso =
+        corredor.tempo_final && corredor.tempo_de_atraso
+          ? `${corredor.tempo_de_atraso}`
+          : undefined;
+
+      return {
+        ...corredor,
+        posicao: index + 1, // A posição começa de 1
+        tempo_atraso, // Inclui o tempo de atraso se existir
+      };
     });
 
     // Se um número de corredor foi fornecido, encontrar o corredor específico
     if (numero_corredor !== undefined) {
-      const corredorSelecionado = sortedResults.find(corredor => corredor.numero_corredor === numero_corredor);
+      const corredorSelecionado = enhancedResults.find(
+        corredor => corredor.numero_corredor === numero_corredor
+      );
       return corredorSelecionado ? [corredorSelecionado] : []; // Retorna o corredor com a posição correta
     }
 
-    // Caso contrário, retornamos todos os corredores com suas posições
-    return sortedResults as (Cronometro & { posicao: number })[]; // Retorna os corredores com a posição
+    // Caso contrário, retornamos todos os corredores com suas posições e tempos de atraso
+    return enhancedResults;
   } catch (error) {
     console.error('Erro ao buscar corredores ordenados:', error);
     return [];
@@ -192,3 +213,11 @@ export default async function searchCorredores(
     db.closeAsync(); // Fechar o banco após a execução
   }
 }
+
+// Função para converter tempo no formato 'HH:MM:SS.MS' para milissegundos
+const timeToMilliseconds = (time: string | null) => {
+  if (!time) return Infinity; // Se não houver tempo, considera um tempo "infinito" (como não válido)
+  const [hours, minutes, seconds] = time.split(':').map(Number);
+  const [secs, ms] = seconds.toString().split('.').map(Number);
+  return (hours * 3600 + minutes * 60 + secs) * 1000 + (ms || 0);
+};

@@ -4,7 +4,7 @@ import Icon from 'react-native-vector-icons/FontAwesome';
 import { useRouter } from 'expo-router';
 import * as FileSystem from 'expo-file-system'; // Para salvar arquivos localmente
 import * as Sharing from 'expo-sharing'; // Para compartilhar arquivos
-import searchCorredores from './database/initializeDatabase'; // Importar a função searchCorredores
+import  searchCorredores  from './database/initializeDatabase'; // Importar a função searchCorredores
 
 export default function Classificacao() {
   const router = useRouter();
@@ -45,10 +45,11 @@ export default function Classificacao() {
 
   // Gerar arquivo CSV para exportação
   const generateCSV = () => {
-    const header = 'Posição,Número,Nome,Tempo Final\n';
-    const rows = results.map((item, index) =>
-      `${item.posicao},${item.numero_corredor},${item.nome},${item.tempo_final}\n`
+    const header = 'Posição,Número,Tempo Atrasado,Tempo Final\n';
+    const rows = results.map((item) =>
+      `${item.posicao},${item.numero_corredor},${item.tempo_atraso || 'N/A'},${item.tempo_final}\n`
     ).join('');
+    
     const csvContent = header + rows;
     const fileUri = FileSystem.documentDirectory + 'resultados.csv';
     
@@ -100,7 +101,7 @@ export default function Classificacao() {
                   <View style={styles.tableHeader}>
                     <Text style={[styles.tableHeaderCell, styles.colPosition]}>Posição</Text>
                     <Text style={[styles.tableHeaderCell, styles.colNumber]}>Número</Text>
-                    <Text style={[styles.tableHeaderCell, styles.colName]}>Nome</Text>
+                    <Text style={[styles.tableHeaderCell, styles.colDelay]}>Tempo Atrasado</Text>
                     <Text style={[styles.tableHeaderCell, styles.colTime]}>Tempo Final</Text>
                   </View>
                 )}
@@ -108,7 +109,9 @@ export default function Classificacao() {
                   <View style={styles.tableRow}>
                     <Text style={[styles.tableCell, styles.colPosition]}>{item.posicao}</Text>
                     <Text style={[styles.tableCell, styles.colNumber]}>{item.numero_corredor}</Text>
-                    <Text style={[styles.tableCell, styles.colName]}>{item.nome}</Text>
+                    <Text style={[styles.tableCell, styles.colDelay]}>
+                      {item.tempo_atraso ? item.tempo_atraso : 'N/A'}
+                    </Text>
                     <Text style={[styles.tableCell, styles.colTime]}>{item.tempo_final}</Text>
                   </View>
                 )}
@@ -251,14 +254,7 @@ const styles = StyleSheet.create({
   // Estilo para a coluna "Número" com largura fixa
   colNumber: { width: 75 }, // Define largura fixa de 80 para a coluna "Número"
 
-  // Estilo para a coluna "Nome" com largura fixa
-  colName: { width: 85 }, // Define largura fixa de 150 para a coluna "Nome"
-
-  // Estilo para a coluna "Idade" com largura fixa
-  colAge: { width: 60 }, // Define largura fixa de 60 para a coluna "Idade"
-
-  // Estilo para a coluna "Sexo" com largura fixa
-  colGender: { width: 85 }, // Define largura fixa de 60 para a coluna "Sexo"
+  colDelay: {width: 100 },  
 
   // Estilo para a coluna "Tempo" com largura fixa
   colTime: { width: 100 }, // Define largura fixa de 100 para a coluna "Tempo"

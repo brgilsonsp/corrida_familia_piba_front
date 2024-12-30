@@ -5,7 +5,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { Picker } from '@react-native-picker/picker';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage'; // Importar AsyncStorage
-import { initializeDatabase, insertCorredor, getAllCorredores } from './database/initializeDatabase';
+import  initializeDatabase, { insertCorredor, getAllCorredores } from './database/initializeDatabase';
 
 interface Corredor {
   id_atleta: string;

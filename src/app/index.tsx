@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Image, Modal, AppState, AppStateStatus, StyleSheet } from 'react-native';
+import { Alert, View, Text, TextInput, TouchableOpacity, Image, Modal, AppState, AppStateStatus, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import usePostCorredores from './AtualizarDados'
 
 export default function Home() {
   const router = useRouter();
@@ -77,16 +78,29 @@ export default function Home() {
     }
   };
 
+  const { postLargadas, postChegadas } = usePostCorredores();
+
+  const handleEnviarDados = async () => {
+    try {
+      // Agora, você pode chamar as funções postLargadas e postChegadas diretamente
+      await postLargadas();  // Envia as largadas
+      await postChegadas();  // Envia as chegadas
+
+      Alert.alert('Sucesso', 'Dados enviados para as APIs!');
+    } catch (error) {
+      console.error('Erro ao enviar dados:', error);
+      Alert.alert('Erro', 'Ocorreu um erro ao enviar os dados.');
+    }
+  };
+
   return (
     <View style={styles.container}>
       {userName ? <Text style={styles.userName}>Olá, {userName}!</Text> : null}
-
       <Modal
         animationType="slide"
         transparent={true}
         visible={isModalVisible}
-        onRequestClose={() => setModalVisible(false)}
-      >
+        onRequestClose={() => setModalVisible(false)}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContainer}>
             <Text style={styles.modalText}>Por favor, insira seu nome:</Text>
@@ -94,8 +108,7 @@ export default function Home() {
               style={styles.input}
               placeholder="Digite seu nome"
               value={userName}
-              onChangeText={setUserName}
-            />
+              onChangeText={setUserName}/>
             <TouchableOpacity style={styles.modalButton} onPress={handleNameSubmit}>
               <Text style={styles.buttonText}>Confirmar</Text>
             </TouchableOpacity>
@@ -107,8 +120,7 @@ export default function Home() {
         animationType="slide"
         transparent={true}
         visible={isPasswordModalVisible}
-        onRequestClose={() => setPasswordModalVisible(false)}
-      >
+        onRequestClose={() => setPasswordModalVisible(false)}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContainer}>
             <Text style={styles.modalText}>Digite sua senha para acessar configurações:</Text>
@@ -117,8 +129,7 @@ export default function Home() {
               placeholder="Digite sua senha"
               secureTextEntry={true}
               value={password}
-              onChangeText={setPassword}
-            />
+              onChangeText={setPassword}/>
             <TouchableOpacity style={styles.modalButton} onPress={handlePasswordSubmit}>
               <Text style={styles.buttonText}>Entrar</Text>
             </TouchableOpacity>
@@ -131,16 +142,14 @@ export default function Home() {
       <View style={styles.buttonRow}>
         <TouchableOpacity
           style={styles.button}
-          onPress={() => router.push(`/Cronometro?userName=${userName}`)}
-        >
+          onPress={() => router.push(`/Cronometro?userName=${userName}`)}>
           <Icon name="timer" size={20} color="#fff" />
           <Text style={styles.buttonText}>Cronômetro</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
           style={styles.button}
-          onPress={() => router.push(`/Checkin?monitor=${userName}`)}
-        >
+          onPress={() => router.push(`/Checkin?monitor=${userName}`)}>
           <Icon name="check-circle" size={20} color="#fff" />
           <Text style={styles.buttonText}>Check in</Text>
         </TouchableOpacity>
@@ -149,16 +158,14 @@ export default function Home() {
       <View style={styles.buttonRow}>
         <TouchableOpacity
           style={styles.button}
-          onPress={() => router.push('/Classificacao')}
-        >
+          onPress={() => router.push('/Classificacao')}>
           <Icon name="stars" size={20} color="#fff" />
           <Text style={styles.buttonText}>Classificação</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
           style={styles.button}
-          onPress={() => router.push('/ClassificacaoGeral')}
-        >
+          onPress={() => router.push('/ClassificacaoGeral')}>
           <Icon name="leaderboard" size={20} color="#fff" />
           <Text style={styles.buttonText}>Classificação Geral</Text>
         </TouchableOpacity>
@@ -167,8 +174,7 @@ export default function Home() {
       <View style={styles.buttonRow}>
         <TouchableOpacity
           style={styles.button}
-          onPress={() => router.push('/')}
-        >
+          onPress={handleEnviarDados}>
           <Icon name="refresh" size={20} color="#fff" />
           <Text style={styles.buttonText}>Atualizar Dados</Text>
         </TouchableOpacity>

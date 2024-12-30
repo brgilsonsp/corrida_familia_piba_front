@@ -179,7 +179,8 @@ export default function ClassificacaoGeral() {
                     <Text style={[styles.tableHeaderCell, styles.colName]}>Nome</Text>
                     <Text style={[styles.tableHeaderCell, styles.colAge]}>Idade</Text>
                     <Text style={[styles.tableHeaderCell, styles.colGender]}>Sexo</Text>
-                    <Text style={[styles.tableHeaderCell, styles.colTime]}>Tempo</Text>
+                    <Text style={[styles.tableHeaderCell, styles.colDelay]}>Tempo Atrasado</Text>
+                    <Text style={[styles.tableHeaderCell, styles.colTime]}>Tempo Final</Text>
                   </View>
                 )}
                 renderItem={({ item, index }) => (
@@ -189,6 +190,9 @@ export default function ClassificacaoGeral() {
                     <Text style={[styles.tableCell, styles.colName]}>{item.nome_atleta}</Text>
                     <Text style={[styles.tableCell, styles.colAge]}>{item.idade}</Text>
                     <Text style={[styles.tableCell, styles.colGender]}>{item.sexo}</Text>
+                    <Text style={[styles.tableCell, styles.colDelay]}>
+                      {item.tempo_atraso ? item.tempo_atraso : 'N/A'}
+                    </Text>
                     <Text style={[styles.tableCell, styles.colTime]}>{item.tempo_corrida}</Text>
                   </View>
                 )}
@@ -339,6 +343,8 @@ const styles = StyleSheet.create({
 
   // Estilo para a coluna "Sexo" com largura fixa
   colGender: { width: 85 }, // Define largura fixa de 60 para a coluna "Sexo"
+
+  colDelay: {width: 100 },
 
   // Estilo para a coluna "Tempo" com largura fixa
   colTime: { width: 100 }, // Define largura fixa de 100 para a coluna "Tempo"
