@@ -15,11 +15,11 @@ export default function ClassificacaoGeral() {
   const [categoria, setCategoria] = useState('Todas');
   const [results, setResults] = useState([]);
   const [apiUrlBase, setApiUrlBase] = useState('');
-  const [segmentacao, setSegmentacao] = useState({ sexo: [], range_idade: [], modalidade: [] }); // Novo estado para segmentação
+  const [segmentacao, setSegmentacao] = useState({ sexo: [], range_idade: [], modalidade: [] });
   const [modalVisible, setModalVisible] = useState(false);
   const [nomeCorredor, setNomeCorredor] = useState('');
   const [numeroCorredor, setNumeroCorredor] = useState('');
-  
+
   useEffect(() => {
     const loadUrlBase = async () => {
       const savedUrlBase = await AsyncStorage.getItem('apiUrlBase');
@@ -49,56 +49,64 @@ export default function ClassificacaoGeral() {
       console.error('URL base da API não foi definida');
       return;
     }
-  
+
     let url = `${apiUrlBase}.execute-api.us-east-1.amazonaws.com/prd/classificacao`;
-  
+
     // Adiciona os parâmetros de acordo com os filtros selecionados
     let params = {};
-  
+
     if (sexo !== 'Todos') params.sexo = sexo;
     if (faixaEtaria !== 'Todas') params.faixa_etaria = faixaEtaria;
     if (categoria !== 'Todas') params.modalidade = categoria;
-    if (nomeCorredor) params.nome_atleta = nomeCorredor;  // Corrigido para o campo correto "nome_atleta"
-    if (numeroCorredor) params.numero_peito = numeroCorredor;  // Corrigido para o campo correto "numero_peito"
-  
+    if (nomeCorredor) params.nome_atleta = nomeCorredor;
+    if (numeroCorredor) params.numero_peito = numeroCorredor;
+
     // Converte os parâmetros para uma string de query
     const queryParams = new URLSearchParams(params).toString();
     if (queryParams) {
       url += `?${queryParams}`;
     }
-  
+
     try {
       const response = await axios.get(url);
-  
-      // Verifica se a resposta contém dados válidos
+
       if (response.data && Array.isArray(response.data)) {
         setResults(response.data);  // Atualiza com os dados retornados
+        console.log(response.data); // Log para verificar a estrutura dos dados
         await AsyncStorage.setItem('searchResults', JSON.stringify(response.data)); // Armazenar resultados
       } else {
         console.error('Nenhum dado válido encontrado');
-        await AsyncStorage.removeItem('searchResults'); // Remove dados inválidos
+        await AsyncStorage.removeItem('searchResults');
       }
-  
+
       setModalVisible(true); // Abre o modal quando os dados forem carregados
     } catch (error) {
       console.error('Erro ao buscar dados:', error);
     }
   };
-  
 
   const generateCSV = () => {
     const header = 'Posição,Número,Nome,Idade,Sexo,Tempo\n';
-    const rows = results.map(item => 
-      `${item.position},${item.numero_peito},${item.nome_atleta},${item.idade},${item.sexo},${item.tempo_corrida}\n`
-    ).join('');
+    const rows = results.map((item, index) => {
+      // Verifica se os campos necessários estão presentes e válidos
+      const position = item.position || (index + 1); // Usa o índice caso 'position' não esteja presente
+      const numero = item.numero_peito || 'N/A';
+      const nome = item.nome_atleta || 'Desconhecido';
+      const idade = item.idade || 'Desconhecida';
+      const sexo = item.sexo || 'Indefinido';
+      const tempo = item.tempo_corrida || 'Desconhecido';
+
+      return `${position},${numero},${nome},${idade},${sexo},${tempo}\n`;
+    }).join('');
     const csvContent = header + rows;
     const fileUri = FileSystem.documentDirectory + 'resultados.csv';
     
+    // Escreve o arquivo CSV no diretório local
     FileSystem.writeAsStringAsync(fileUri, csvContent).then(() => {
-      Sharing.shareAsync(fileUri);
+      Sharing.shareAsync(fileUri); // Compartilha o arquivo gerado
     });
   };
-
+  
   return (
     <View style={styles.container}>
       <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>

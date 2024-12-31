@@ -177,12 +177,13 @@ export default async function searchCorredores(
 
     // Garantir que results seja um array válido
     const sortedResults = Array.isArray(results) ? results.sort((a, b) => {
+      // Ordenar apenas pelo tempo final
       const timeA = timeToMilliseconds(a.tempo_final ?? '');
       const timeB = timeToMilliseconds(b.tempo_final ?? '');
       return timeA - timeB; // Ordena de menor (melhor tempo) para maior (pior tempo)
     }) : [];
 
-    // Atribuir posições e calcular o tempo de atraso
+    // Atribuir posições e incluir o tempo de atraso, mas não usá-lo para classificação
     const enhancedResults = sortedResults.map((corredor, index) => {
       const tempo_atraso =
         corredor.tempo_final && corredor.tempo_de_atraso
@@ -192,7 +193,7 @@ export default async function searchCorredores(
       return {
         ...corredor,
         posicao: index + 1, // A posição começa de 1
-        tempo_atraso, // Inclui o tempo de atraso se existir
+        tempo_atraso, // Inclui o tempo de atraso, mas não afeta a classificação
       };
     });
 
@@ -221,3 +222,4 @@ const timeToMilliseconds = (time: string | null) => {
   const [secs, ms] = seconds.toString().split('.').map(Number);
   return (hours * 3600 + minutes * 60 + secs) * 1000 + (ms || 0);
 };
+
