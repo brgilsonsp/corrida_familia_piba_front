@@ -7,104 +7,124 @@ import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from 'expo-file-system'; // Para salvar arquivos localmente
 import * as Sharing from 'expo-sharing'; // Para compartilhar arquivos
+import { useHandleAppStateCsv } from './ApagaUserName';
+
 
 export default function ClassificacaoGeral() {
   const router = useRouter();
   const [sexo, setSexo] = useState('Todos');
   const [faixaEtaria, setFaixaEtaria] = useState('Todas');
-  const [categoria, setCategoria] = useState('Todas');
   const [results, setResults] = useState([]);
-  const [apiUrlBase, setApiUrlBase] = useState('');
-  const [segmentacao, setSegmentacao] = useState({ sexo: [], range_idade: [], modalidade: [] });
+  const [urlBase, setUrlBase] = useState<string>(''); // Estado para armazenar a URL base
+  const [segmentacao, setSegmentacao] = useState({ sexo: [], range_idade: [] });
   const [modalVisible, setModalVisible] = useState(false);
-  const [nomeCorredor, setNomeCorredor] = useState('');
-  const [numeroCorredor, setNumeroCorredor] = useState('');
+  const [isSharing, setIsSharing] = useState(false); // Controle para compartilhamento
 
+  useHandleAppStateCsv(isSharing);
+
+  // Carregar a URL base salva
   useEffect(() => {
     const loadUrlBase = async () => {
       const savedUrlBase = await AsyncStorage.getItem('apiUrlBase');
-      if (savedUrlBase) setApiUrlBase(savedUrlBase);
+      if (savedUrlBase) {
+        setUrlBase(savedUrlBase);
+      } else {
+        // Defina um valor padrão se não houver URL salva
+        setUrlBase('https://hufd66cq2i');
+      }
     };
     loadUrlBase();
+  }, []);
 
-    // Buscar segmentação da API
+  // Buscar segmentação da API
+  useEffect(() => {
     const fetchSegmentacao = async () => {
-      try {
-        const response = await axios.get(`${apiUrlBase}.execute-api.us-east-1.amazonaws.com/prd/segmentacao`);
-        if (response.data) {
-          setSegmentacao(response.data); // Atualiza com os dados da segmentação
+      if (urlBase) { // Verifica se a URL base foi carregada
+        try {
+          const response = await axios.get(`${urlBase}.execute-api.us-east-1.amazonaws.com/prd/segmentacao`);
+          if (response.data) {
+            setSegmentacao(response.data); // Atualiza com os dados da segmentação
+          }
+        } catch (error) {
+          console.error('Erro ao buscar dados de segmentação:', error);
         }
-      } catch (error) {
-        console.error('Erro ao buscar dados de segmentação:', error);
       }
     };
 
-    if (apiUrlBase) {
-      fetchSegmentacao();
-    }
-  }, [apiUrlBase]); // O efeito depende da base URL da API
+    fetchSegmentacao();
+  }, [urlBase]); // O efeito depende da base URL da API
 
   const buscarDados = async () => {
-    if (!apiUrlBase) {
+    if (!urlBase) {
       console.error('URL base da API não foi definida');
       return;
     }
-
-    let url = `${apiUrlBase}.execute-api.us-east-1.amazonaws.com/prd/classificacao`;
-
+  
+    let url = `${urlBase}.execute-api.us-east-1.amazonaws.com/prd/classificacao`;
+  
     // Adiciona os parâmetros de acordo com os filtros selecionados
     let params = {};
-
+  
     if (sexo !== 'Todos') params.sexo = sexo;
     if (faixaEtaria !== 'Todas') params.faixa_etaria = faixaEtaria;
-    if (categoria !== 'Todas') params.modalidade = categoria;
-    if (nomeCorredor) params.nome_atleta = nomeCorredor;
-    if (numeroCorredor) params.numero_peito = numeroCorredor;
-
+  
     // Converte os parâmetros para uma string de query
     const queryParams = new URLSearchParams(params).toString();
     if (queryParams) {
       url += `?${queryParams}`;
     }
-
+  
+    // Log para depuração
+    console.log('Parâmetros de consulta:', queryParams);
+    console.log('URL completa:', url);
+  
     try {
       const response = await axios.get(url);
-
-      if (response.data && Array.isArray(response.data)) {
+  
+      if (response.data && Array.isArray(response.data) && response.data.length > 0) {
         setResults(response.data);  // Atualiza com os dados retornados
-        console.log(response.data); // Log para verificar a estrutura dos dados
+        console.log('Dados recebidos:', response.data); // Log para verificar a estrutura dos dados
         await AsyncStorage.setItem('searchResults', JSON.stringify(response.data)); // Armazenar resultados
+        setModalVisible(true); // Abre o modal quando os dados forem carregados
       } else {
-        console.error('Nenhum dado válido encontrado');
+        setResults([]);  // Garante que os resultados estarão vazios se não houver dados
+        setModalVisible(true); // Abre o modal, mas vazio
+        console.log('Nenhum dado válido encontrado');
         await AsyncStorage.removeItem('searchResults');
       }
-
-      setModalVisible(true); // Abre o modal quando os dados forem carregados
     } catch (error) {
       console.error('Erro ao buscar dados:', error);
     }
   };
 
-  const generateCSV = () => {
-    const header = 'Posição,Número,Nome,Idade,Sexo,Tempo\n';
+  // Gerar arquivo CSV para exportação
+  const generateCSV = async () => {
+    const header = 'Posição,Número,Nome,Idade,Sexo,Tempo Atraso,Tempo Final\n';
     const rows = results.map((item, index) => {
       // Verifica se os campos necessários estão presentes e válidos
-      const position = item.position || (index + 1); // Usa o índice caso 'position' não esteja presente
+      const position = item.position || index + 1; // Usa o índice caso 'position' não esteja presente
       const numero = item.numero_peito || 'N/A';
-      const nome = item.nome_atleta || 'Desconhecido';
-      const idade = item.idade || 'Desconhecida';
-      const sexo = item.sexo || 'Indefinido';
-      const tempo = item.tempo_corrida || 'Desconhecido';
+      const nome = item.nome_atleta || 'N/A';
+      const idade = item.idade || 'N/A';
+      const sexo = item.sexo || 'N/A';
+      const tempo_atrasado = item.tempo_atrasado || 'N/A';
+      const tempo = item.tempo_corrida || 'N/A';
 
-      return `${position},${numero},${nome},${idade},${sexo},${tempo}\n`;
+      return `${position},${numero},${nome},${idade},${sexo},${tempo_atrasado},${tempo}\n`;
     }).join('');
+
     const csvContent = header + rows;
     const fileUri = FileSystem.documentDirectory + 'resultados.csv';
-    
-    // Escreve o arquivo CSV no diretório local
-    FileSystem.writeAsStringAsync(fileUri, csvContent).then(() => {
-      Sharing.shareAsync(fileUri); // Compartilha o arquivo gerado
-    });
+
+    try {
+      setIsSharing(true); // Define que o compartilhamento está ativo
+      await FileSystem.writeAsStringAsync(fileUri, csvContent);
+      await Sharing.shareAsync(fileUri);
+    } catch (error) {
+      console.error('Erro ao gerar ou compartilhar o CSV:', error);
+    } finally {
+      setIsSharing(false); // Redefine o estado após o compartilhamento
+    }
   };
   
   return (
@@ -134,33 +154,6 @@ export default function ClassificacaoGeral() {
           ))}
         </Picker>
       </View>
-
-      <Text style={styles.label}>Categoria:</Text>
-      <View style={styles.pickerContainer}>
-        <Picker selectedValue={categoria} style={styles.picker} onValueChange={(itemValue) => setCategoria(itemValue)}>
-          <Picker.Item label="Todas" value="Todas" />
-          {segmentacao.modalidade.map((mod, index) => (
-            <Picker.Item key={index} label={mod} value={mod} />
-          ))}
-        </Picker>
-      </View>
-
-      <Text style={styles.label}>Nome do Corredor:</Text>
-        <TextInput
-          style={styles.input}
-          value={nomeCorredor}
-          onChangeText={(text) => setNomeCorredor(text)}
-          placeholder="Digite o nome do corredor"
-        />
-
-      <Text style={styles.label}>Número do Corredor:</Text>
-        <TextInput
-          style={styles.input}
-          value={numeroCorredor}
-          onChangeText={(text) => setNumeroCorredor(text)}
-          placeholder="Digite o número do corredor"
-          keyboardType="numeric"
-        />
 
       <TouchableOpacity style={styles.button} onPress={buscarDados}>
         <Text style={styles.buttonText}>Pesquisar</Text>
@@ -243,7 +236,7 @@ const styles = StyleSheet.create({
     marginBottom: 3,
   },
   title: {
-    fontSize: 40,
+    fontSize: 30,
     fontWeight: 'bold',
     textAlign: 'center',
     marginBottom: 20,
@@ -324,7 +317,9 @@ const styles = StyleSheet.create({
     textAlign: 'center', // Centraliza o texto dentro da célula
     padding: 10, // Adiciona espaçamento interno na célula para afastar o texto das bordas
     borderRightWidth: 1, // Define a largura da borda direita para separar visualmente as células
+    borderLeftWidth: 1,
     borderRightColor: '#ccc', // Cor da borda direita
+    borderLeftColor: '#ccc'
   },
 
   // Estilo para cada célula do cabeçalho
@@ -333,8 +328,10 @@ const styles = StyleSheet.create({
     textAlign: 'center', // Centraliza o texto dentro da célula do cabeçalho
     padding: 10, // Adiciona espaçamento interno para as células do cabeçalho
     color: '#007BFF', // Define a cor do texto no cabeçalho para destacar
-    borderRightWidth: 1, // Define a borda direita para separar visualmente cada célula do cabeçalho
+    borderRightWidth: 1, // Define a largura da borda direita para separar visualmente as células
+    borderLeftWidth: 1,
     borderRightColor: '#ccc', // Cor da borda direita
+    borderLeftColor: '#ccc'
   },
 
   // Estilo para a coluna "Posição" com largura fixa
@@ -350,7 +347,7 @@ const styles = StyleSheet.create({
   colAge: { width: 60 }, // Define largura fixa de 60 para a coluna "Idade"
 
   // Estilo para a coluna "Sexo" com largura fixa
-  colGender: { width: 85 }, // Define largura fixa de 60 para a coluna "Sexo"
+  colGender: { width: 90 }, // Define largura fixa de 60 para a coluna "Sexo"
 
   colDelay: {width: 100 },
 

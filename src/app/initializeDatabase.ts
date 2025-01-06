@@ -63,7 +63,6 @@ export async function insertCorredor(data: Cronometro) {
             data.tempo_de_atraso ?? null,
           ]
         );
-        Alert.alert('Dados inseridos com sucesso');
       }
     });
   } catch (error) {
@@ -139,7 +138,6 @@ export async function updateCorredor(data: Cronometro) {
               data.numero_corredor
             ]
           );
-          Alert.alert('Dados atualizados com sucesso');
         }
       } else {
         Alert.alert('Erro ao atualizar dados', 'Corredor não encontrado');
@@ -185,10 +183,7 @@ export default async function searchCorredores(
 
     // Atribuir posições e incluir o tempo de atraso, mas não usá-lo para classificação
     const enhancedResults = sortedResults.map((corredor, index) => {
-      const tempo_atraso =
-        corredor.tempo_final && corredor.tempo_de_atraso
-          ? `${corredor.tempo_de_atraso}`
-          : undefined;
+      const tempo_atraso = corredor.tempo_de_atraso ? `${corredor.tempo_de_atraso}` : undefined;
 
       return {
         ...corredor,

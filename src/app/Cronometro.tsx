@@ -3,8 +3,9 @@ import { View, Text, Alert, TouchableOpacity, TextInput, Modal, StyleSheet } fro
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Icon from 'react-native-vector-icons/FontAwesome';
-import { getCorredorByNumber, updateCorredor, getAllCorredores } from './database/initializeDatabase';
-import useServerTime from './hook/useServerTime';
+import { getCorredorByNumber, insertCorredor,updateCorredor } from './initializeDatabase';
+import useServerTime from './useServerTime';
+import useHandleAppState from './ApagaUserName';
 
 export default function Cronometro() {
   const route = useRouter();
@@ -19,6 +20,8 @@ export default function Cronometro() {
   const animationFrameId = useRef<number | null>(null);  // Ref para armazenar o ID do requestAnimationFrame
   const lastTimeRef = useRef(0);  // Ref para armazenar o tempo do último quadro
   const startTimeRef = useRef(0);  // Ref para armazenar o tempo inicial do cronômetro
+
+  useHandleAppState()
 
   // Formatar o tempo em "hh:mm:ss:ms"
   const formatTimeToDisplay = useCallback((time: number) => {
@@ -118,8 +121,12 @@ export default function Cronometro() {
 
     // Verifica se o número do corredor foi preenchido
     if (!runnerNumber.trim()) {
-        Alert.alert('Erro', 'Digite o número do corredor antes de salvar.');
-        return;
+      setResponseMessages((prevMessages) => {
+        const newMessages = [...prevMessages];
+        newMessages[index] = 'Digite o número do corredor antes de salvar.';
+        return newMessages;
+      });
+    return;
     }
 
     // Valida se o número do corredor é válido
@@ -134,24 +141,15 @@ export default function Cronometro() {
 
     const { exists, corredor } = await checkRunnerStatus(parseInt(runnerNumber));
 
-    // Se o corredor existir, verifica o campo tempo_final
-    if (exists) {
-        if (corredor.tempo_final) {
-            setResponseMessages((prevMessages) => {
-                const newMessages = [...prevMessages];
-                newMessages[index] = `O tempo final já foi registrado: ${corredor.tempo_final}`;
-                return newMessages;
-            });
-        } else {
+    if (exists && corredor) {
+        if (!corredor.tempo_final) {
             try {
-                // Atualiza o tempo final no banco de dados
                 await updateCorredor({
-                    numero_corredor: corredor.numero_corredor,
+                    numero_corredor: parseInt(runnerNumber),
                     monitor: userName,
                     tempo_final: formatTimeToDisplay(currentTime),
-                    tempo_de_atraso: corredor.tempo_de_atraso
                 });
-                console.log(`Tempo final registrado: ${formatTimeToDisplay(currentTime)} para o corredor número ${runnerNumber}`);
+
                 setResponseMessages((prevMessages) => {
                     const newMessages = [...prevMessages];
                     newMessages[index] = 'Tempo final atualizado com sucesso!';
@@ -161,105 +159,120 @@ export default function Cronometro() {
                 console.error('Erro ao atualizar tempo final:', error);
                 Alert.alert('Erro ao atualizar tempo final.');
             }
+        } else {
+            setResponseMessages((prevMessages) => {
+                const newMessages = [...prevMessages];
+                newMessages[index] = `O tempo final já foi registrado: ${corredor.tempo_final}`;
+                return newMessages;
+            });
         }
     } else {
+        try {
+            await insertCorredor({
+                numero_corredor: parseInt(runnerNumber),
+                monitor: userName,
+                tempo_final: formatTimeToDisplay(currentTime),
+                tempo_de_atraso: 'N/A',
+            });
+
+            setResponseMessages((prevMessages) => {
+                const newMessages = [...prevMessages];
+                newMessages[index] = 'Tempo final registrado com sucesso!';
+                return newMessages;
+            });
+        } catch (error) {
+            console.error('Erro ao registrar tempo final:', error);
+            Alert.alert('Erro ao registrar tempo final.');
+        }
+    }
+
+    // Limpa o input do corredor correspondente após qualquer caso
+    setRunnerNumbers((prevNumbers) => {
+        const newNumbers = [...prevNumbers];
+        newNumbers[index] = ''; // Apenas o input específico é limpo
+        return newNumbers;
+    });
+  };
+
+  const saveDelayedRunners = async (index) => {
+    const runnerNumber = delayedRunnerNumbers[index];
+
+    // Verifica se o número do corredor foi informado
+    if (!runnerNumber.trim()) {
+      setResponseMessages((prevMessages) => {
+        const newMessages = [...prevMessages];
+        newMessages[index] = 'Digite o número do corredor antes de salvar.';
+        return newMessages;
+      });
+    return;
+    }
+
+    // Verifica se o número do corredor é válido
+    if (isNaN(runnerNumber) || parseInt(runnerNumber) <= 0) {
         setResponseMessages((prevMessages) => {
             const newMessages = [...prevMessages];
-            newMessages[index] = `Número do corredor ${runnerNumber} não encontrado.`;
+            newMessages[index] = 'Número do corredor deve ser um número válido.';
             return newMessages;
         });
+        return;
     }
-    setRunnerNumbers(['', '', '', '']); // Limpa os números dos corredores
+
+    const { exists, corredor } = await checkRunnerStatus(parseInt(runnerNumber));
+
+    if (exists && corredor) { // Verifica se o corredor foi encontrado
+        if (corredor.tempo_final) {
+            setResponseMessages((prevMessages) => {
+                const newMessages = [...prevMessages];
+                newMessages[index] = `O tempo final já foi registrado: ${corredor.tempo_final}`;
+                return newMessages;
+            });
+        } else if (corredor.tempo_de_atraso) {
+            setResponseMessages((prevMessages) => {
+                const newMessages = [...prevMessages];
+                newMessages[index] = `O tempo atrasado já foi registrado: ${corredor.tempo_de_atraso}`;
+                return newMessages;
+            });
+        }
+    } else {
+        try {
+            // Salva o tempo de atraso se o tempo final não existir
+            await insertCorredor({
+                numero_corredor: parseInt(runnerNumber),
+                monitor: userName,
+                tempo_de_atraso: formatTimeToDisplay(currentTime),
+            });
+
+            setResponseMessages((prevMessages) => {
+                const newMessages = [...prevMessages];
+                newMessages[index] = 'Tempo de atraso atualizado com sucesso!';
+                return newMessages;
+            });
+        } catch (error) {
+            console.error('Erro ao atualizar tempo de atraso:', error);
+            Alert.alert('Erro ao atualizar tempo de atraso.');
+        }
+    }
+
+    // Limpa apenas o campo correspondente ao índice
+    setDelayedRunnerNumbers((prevNumbers) => {
+        const newNumbers = [...prevNumbers];
+        newNumbers[index] = '';
+        return newNumbers;
+    });
   };
 
   const openDelayedRunners = async () =>{
     setRunnerNumbers(['', '', '', '']); // Limpa os números dos corredores
     setResponseMessages(['', '', '', '']); // Limpa as mensagens de resposta  
     setModalVisible(true);// Abre o modal de Partida Atrasada
-  }
+  };
+
   const exitDelayedRunners = async () =>{
     setRunnerNumbers(['', '', '', '']); // Limpa os números dos corredores
     setResponseMessages(['', '', '', '']); // Limpa as mensagens de resposta  
     setModalVisible(false);// Abre o modal de Partida Atrasada
     setDelayedRunnerNumbers(['', '', '', '']); // Limpa os números atrasados
-  }
-
-  const saveDelayedRunners = async (index) => {
-    const runnerNumber = delayedRunnerNumbers[index];
-  
-    // Verifica se o número do corredor foi informado
-    if (!runnerNumber.trim()) {
-      Alert.alert('Erro', 'Digite o número do corredor antes de salvar.');
-      return;
-    }
-  
-    // Verifica se o número do corredor é válido
-    if (isNaN(runnerNumber) || parseInt(runnerNumber) <= 0) {
-      setResponseMessages((prevMessages) => {
-        const newMessages = [...prevMessages];
-        newMessages[index] = 'Número do corredor deve ser um número válido.';
-        return newMessages;
-      });
-      return;
-    }
-  
-    // Verifica se o corredor existe
-    const { exists, corredor } = await checkRunnerStatus(parseInt(runnerNumber));
-  
-    if (exists) {
-      // Verifica se o corredor já tem tempo de atraso registrado
-      if (corredor.tempo_de_atraso) {
-        setResponseMessages((prevMessages) => {
-          const newMessages = [...prevMessages];
-          newMessages[index] = `O tempo de atraso já foi registrado: ${corredor.tempo_de_atraso}`;
-          // Limpa os números de corredores atrasados após a operação
-          setDelayedRunnerNumbers(['', '', '', '']);
-          return newMessages;
-        });
-      } else {
-        // Verifica se o tempo final já foi registrado
-        if (corredor.tempo_final) {
-          setResponseMessages((prevMessages) => {
-            const newMessages = [...prevMessages];
-            newMessages[index] = `O tempo final já foi registrado: ${corredor.tempo_final}`;
-            setDelayedRunnerNumbers(['', '', '', '']);
-            return newMessages;
-          });
-          return; // Não salva se já houver tempo final
-        }
-  
-        try {
-          // Atualiza o tempo de atraso
-          await updateCorredor({
-            numero_corredor: corredor.numero_corredor,
-            monitor: userName,
-            tempo_final: corredor.tempo_final,
-            tempo_de_atraso: formatTimeToDisplay(currentTime),
-          });
-  
-          // Mensagem de sucesso
-          setResponseMessages((prevMessages) => {
-            const newMessages = [...prevMessages];
-            newMessages[index] = 'Tempo de atraso atualizado com sucesso!';
-            return newMessages;
-          });
-        } catch (error) {
-          console.error('Erro ao atualizar tempo de atraso:', error);
-          Alert.alert('Erro ao atualizar tempo de atraso.');
-        }
-      }
-    } else {
-      // Mensagem caso o corredor não seja encontrado
-      setResponseMessages((prevMessages) => {
-        const newMessages = [...prevMessages];
-        newMessages[index] = `Número do corredor ${runnerNumber} não encontrado.`;
-        return newMessages;
-      });
-    }
-  
-    // Limpa os números de corredores atrasados após a operação
-    setDelayedRunnerNumbers(['', '', '', '']);
-  };  
+  };
   
   return (
     <View style={stylescronometro.container}>
@@ -354,19 +367,19 @@ const stylescronometro = StyleSheet.create({
   // Contêiner principal
   container: {
     flex: 1,
-    padding: 20,
+    padding: '5%',
     backgroundColor: '#F0F8FF', // Fundo suave azul claro
   },
   
   // Estilo para o botão de voltar
   backButton: {
-    marginBottom: 30, // Espaçamento abaixo do botão
-    top: 5, // Espaçamento acima do botão
+    marginBottom: '2%', // Espaçamento abaixo do botão
+    top: 3, // Espaçamento acima do botão
     left: 1, // Espaçamento à esquerda do botão
   },
 
   title: {
-    fontSize: 40,
+    fontSize: 30,
     fontWeight: 'bold',
     textAlign: 'center',
     marginBottom: 1,
@@ -374,10 +387,10 @@ const stylescronometro = StyleSheet.create({
 
   // Estilo para o texto do temporizador
   timer: {
-    fontSize: 48,
+    fontSize: 45,
     fontWeight: 'bold',
     color: '#007BFF', 
-    marginBottom: 20,
+    marginBottom: '1%',
     textAlign: 'center',
   },
 
@@ -385,11 +398,11 @@ const stylescronometro = StyleSheet.create({
   button: {
     width: '80%',
     backgroundColor: '#007BFF',
-    padding: 15,
+    padding: '5%',
     borderRadius: 10,
     alignItems: 'center',
-    marginTop: 15,
-    marginBottom: 20,
+    marginTop: '2%',
+    marginBottom: '2%',
     alignSelf: 'center',
     shadowColor: '#000',
     shadowOpacity: 0.2,
@@ -407,12 +420,11 @@ const stylescronometro = StyleSheet.create({
     width: '48%', // Cada botão ocupa 48% da largura do contêiner
     marginHorizontal: 5, // Ajusta a distância entre os botões (ajuste conforme necessário)
     marginBottom: 10, // Espaçamento entre os botões e o resto da tela
-  },
-  
-    // Estilo para o texto do botão
-    buttonText: {
-    color: '#FFFFFF', // Cor do texto (branco)
-    fontSize: 16, // Tamanho da fonte do texto
+  },  
+  // Estilo para o texto do botão
+  buttonText: {
+  color: '#FFFFFF', // Cor do texto (branco)
+  fontSize: 16, // Tamanho da fonte do texto
   },
   saveButtonText: {
     color: '#FFFFFF', // Cor do texto (branco)
@@ -481,11 +493,11 @@ const stylescronometro = StyleSheet.create({
   modalTitle4: {
     fontSize: 20,
     fontWeight: 'bold',
-    marginBottom: 20, // Aumentando o espaçamento inferior
+    marginBottom: 10, // Aumentando o espaçamento inferior
     textAlign: 'center',
   },
   comment: {
-    marginTop: 20,
+    marginTop: 5,
     textAlign: 'center',
     color: '#555',
   },

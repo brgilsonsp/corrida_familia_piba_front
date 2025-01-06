@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getAllCorredores } from './database/initializeDatabase'; // Importe suas funções do banco de dados
+import { getAllCorredores } from './initializeDatabase'; // Importe suas funções do banco de dados
 import { Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage'; // Importar AsyncStorage
 
@@ -27,10 +27,16 @@ const usePostCorredores = () => {
       console.log('Corredores:', corredores);
   
       const requests = corredores.map(async corredor => {
+        // Verifica se o tempo_de_atraso é válido
+        if (!corredor.tempo_de_atraso || corredor.tempo_de_atraso === 'N/A' ||  corredor.tempo_de_atraso === null) {
+          console.log(`Ignorando corredor ${corredor.numero_corredor} devido a tempo_de_atraso inválido.`);
+          return; // Ignora este corredor
+        }
+  
         // Construção do payload na ordem correta
         const payload = {
           numero_peito: corredor.numero_corredor,
-          hora: corredor.tempo_de_atraso || null,
+          hora: corredor.tempo_de_atraso,
           monitor: corredor.monitor,
         };
   
@@ -54,7 +60,7 @@ const usePostCorredores = () => {
       });
   
       await Promise.all(requests);
-      Alert.alert('Largadas enviadas', 'Todas as largadas foram registradas com sucesso!');
+      Alert.alert('Largadas enviadas', 'Todas as largadas válidas foram registradas com sucesso!');
     } catch (error) {
       console.error('Erro ao postar largadas:', error);
       Alert.alert('Erro ao postar largadas', error.message || 'Erro desconhecido');
@@ -67,10 +73,16 @@ const usePostCorredores = () => {
       console.log('Corredores:', corredores);
   
       const requests = corredores.map(async corredor => {
+        // Verifica se o tempo_final é válido
+        if (!corredor.tempo_final || corredor.tempo_final === 'N/A' || corredor.tempo_final === null) {
+          console.log(`Ignorando corredor ${corredor.numero_corredor} devido a tempo_final inválido.`);
+          return; // Ignora este corredor
+        }
+  
         // Construção do payload na ordem correta
         const payload = {
           numero_peito: corredor.numero_corredor,
-          hora: corredor.tempo_final || null,
+          hora: corredor.tempo_final,
           monitor: corredor.monitor,
         };
   
@@ -94,12 +106,12 @@ const usePostCorredores = () => {
       });
   
       await Promise.all(requests);
-      Alert.alert('Chegadas enviadas', 'Todas as chegadas foram registradas com sucesso!');
+      Alert.alert('Chegadas enviadas', 'Todas as chegadas válidas foram registradas com sucesso!');
     } catch (error) {
       console.error('Erro ao postar chegadas:', error);
       Alert.alert('Erro ao postar chegadas', error.message || 'Erro desconhecido');
     }
-  };  
+  };
 
   return { postLargadas, postChegadas };
 };

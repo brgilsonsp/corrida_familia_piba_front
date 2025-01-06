@@ -4,13 +4,17 @@ import Icon from 'react-native-vector-icons/FontAwesome';
 import { useRouter } from 'expo-router';
 import * as FileSystem from 'expo-file-system'; // Para salvar arquivos localmente
 import * as Sharing from 'expo-sharing'; // Para compartilhar arquivos
-import  searchCorredores  from './database/initializeDatabase'; // Importar a função searchCorredores
+import  searchCorredores  from './initializeDatabase'; // Importar a função searchCorredores
+import {useHandleAppStateCsv} from './ApagaUserName';
 
 export default function Classificacao() {
   const router = useRouter();
   const [numeroCorredor, setNumeroCorredor] = useState('');
   const [results, setResults] = useState([]);
   const [modalVisible, setModalVisible] = useState(false);
+  const [isSharing, setIsSharing] = useState(false); // Controle para compartilhamento
+
+  useHandleAppStateCsv(isSharing);
 
   // Função para buscar corredor por número
   const buscarCorredorPorNumero = async () => {
@@ -35,7 +39,7 @@ export default function Classificacao() {
   // Função para buscar todos os corredores
   const buscarTodosCorredores = async () => {
     try {
-      const corredores = await searchCorredores(); // Sem parâmetro, buscando todos
+      const corredores = await searchCorredores() || [];
       setResults(corredores);
       setModalVisible(true);
     } catch (error) {
@@ -43,19 +47,24 @@ export default function Classificacao() {
     }
   };
 
-  // Gerar arquivo CSV para exportação
-  const generateCSV = () => {
+  const generateCSV = async () => {
     const header = 'Posição,Número,Tempo Atrasado,Tempo Final\n';
     const rows = results.map((item) =>
-      `${item.posicao},${item.numero_corredor},${item.tempo_atraso || 'N/A'},${item.tempo_final}\n`
+      `${item.posicao},${item.numero_corredor},${item.tempo_atraso || 'N/A'},${item.tempo_final || "N/A"}\n`
     ).join('');
-    
+
     const csvContent = header + rows;
     const fileUri = FileSystem.documentDirectory + 'resultados.csv';
-    
-    FileSystem.writeAsStringAsync(fileUri, csvContent).then(() => {
-      Sharing.shareAsync(fileUri);
-    });
+
+    try {
+      setIsSharing(true); // Inicia o controle de compartilhamento
+      await FileSystem.writeAsStringAsync(fileUri, csvContent);
+      await Sharing.shareAsync(fileUri);
+    } catch (error) {
+      console.error('Erro ao compartilhar CSV:', error);
+    } finally {
+      setIsSharing(false); // Finaliza o controle de compartilhamento
+    }
   };
 
   return (
@@ -95,7 +104,7 @@ export default function Classificacao() {
             <ScrollView horizontal>
               <FlatList
                 data={results}
-                keyExtractor={(item, index) => index.toString()}
+                keyExtractor={(item, index) => (index !== undefined ? index.toString() : '')}
                 stickyHeaderIndices={[0]}
                 ListHeaderComponent={() => (
                   <View style={styles.tableHeader}>
@@ -112,7 +121,9 @@ export default function Classificacao() {
                     <Text style={[styles.tableCell, styles.colDelay]}>
                       {item.tempo_atraso ? item.tempo_atraso : 'N/A'}
                     </Text>
-                    <Text style={[styles.tableCell, styles.colTime]}>{item.tempo_final}</Text>
+                    <Text style={[styles.tableCell, styles.colTime]}>
+                      {item.tempo_final ? item.tempo_final : 'N/A'}
+                    </Text>
                   </View>
                 )}
               />
@@ -154,7 +165,7 @@ const styles = StyleSheet.create({
     marginBottom: 3,
   },
   title: {
-    fontSize: 40,
+    fontSize: 35,
     fontWeight: 'bold',
     textAlign: 'center',
     marginBottom: 20,
@@ -235,7 +246,9 @@ const styles = StyleSheet.create({
     textAlign: 'center', // Centraliza o texto dentro da célula
     padding: 10, // Adiciona espaçamento interno na célula para afastar o texto das bordas
     borderRightWidth: 1, // Define a largura da borda direita para separar visualmente as células
+    borderLeftWidth: 1,
     borderRightColor: '#ccc', // Cor da borda direita
+    borderLeftColor: '#ccc'
   },
 
   // Estilo para cada célula do cabeçalho
@@ -244,8 +257,10 @@ const styles = StyleSheet.create({
     textAlign: 'center', // Centraliza o texto dentro da célula do cabeçalho
     padding: 10, // Adiciona espaçamento interno para as células do cabeçalho
     color: '#007BFF', // Define a cor do texto no cabeçalho para destacar
-    borderRightWidth: 1, // Define a borda direita para separar visualmente cada célula do cabeçalho
+    borderRightWidth: 1, // Define a largura da borda direita para separar visualmente as células
+    borderLeftWidth: 1,
     borderRightColor: '#ccc', // Cor da borda direita
+    borderLeftColor: '#ccc'
   },
 
   // Estilo para a coluna "Posição" com largura fixa

@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { View, TextInput, TouchableOpacity, Text, FlatList, Alert, StyleSheet } from 'react-native';
+import { View, TextInput, TouchableOpacity, Text, FlatList, Alert, StyleSheet, Dimensions } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Picker } from '@react-native-picker/picker';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage'; // Importar AsyncStorage
-import  initializeDatabase, { insertCorredor, getAllCorredores } from './database/initializeDatabase';
+import useHandleAppState from './ApagaUserName';
 
 interface Corredor {
   id_atleta: string;
@@ -35,6 +35,8 @@ export default function Checkin() {
   const [isCpfOrRneEditable, setIsCpfOrRneEditable] = useState(true);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
+  useHandleAppState()
+
   // Carregar a URL base salva
   useEffect(() => {
     const loadUrlBase = async () => {
@@ -47,20 +49,6 @@ export default function Checkin() {
       }
     };
     loadUrlBase();
-  }, []);
-
-  useEffect(() => {
-    // Inicializa o banco de dados ao iniciar o app
-    initializeDatabase();
-  }, []);
-
-  const fetchCorredores = async () => {
-    const corredores = await getAllCorredores();
-    console.log('Dados do banco de dados:', corredores);
-  };
-
-  useEffect(() => {
-    fetchCorredores();
   }, []);
 
   // Função para remover formatação do CPF (pontos, hífen)
@@ -197,17 +185,6 @@ const handlePostNewCorredor = async () => {
     if (response.ok) {
       Alert.alert('Sucesso', 'Novo atleta cadastrado com sucesso!');
 
-      // Inserir o novo corredor no banco de dados SQLite
-      await insertCorredor({
-        numero_corredor: corredor.numero_peito,  // Garantir que o número seja convertido para número
-        monitor: corredor.monitor,
-        tempo_final: null,
-        tempo_de_atraso: null
-      });
-
-      // Recuperar e exibir os dados do banco de dados
-      fetchCorredores();
-
       // Limpar os campos de entrada após o cadastro
       setQuery('');  // Limpar o nome
       setCpfOrRne('');  // Limpar o CPF/RNE
@@ -266,16 +243,6 @@ const handlePutCorredor = async () => {
     if (response.ok) {
       Alert.alert('Sucesso', 'Check-in realizado com sucesso!');
       
-      // Adiciona a lógica para inserir no SQLite
-      await insertCorredor({
-        numero_corredor: corredor.numero_peito,  // Garantir que o número seja convertido para número
-        monitor: corredor.monitor,
-        tempo_final: null,
-        tempo_de_atraso: null
-      });
-
-      // Recupera e exibe os dados do banco no console
-      fetchCorredores();
 
       // Limpar os campos de entrada após o cadastro
       setQuery('');  // Limpar o nome
@@ -305,10 +272,14 @@ const handlePutCorredor = async () => {
  
   return (
     <View style={styles.container}>
+    <View style={styles.headerContainer}>
       <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
         <Icon name="arrow-left" size={24} color="#000" />
       </TouchableOpacity>
-      <Text style={styles.title}>Check-in</Text>
+      <TouchableOpacity>
+        <Text style={styles.title}>Check-in</Text>
+      </TouchableOpacity>
+    </View>
 
       {/* Campo Nome */}
       <View style={styles.margem}>
@@ -406,16 +377,18 @@ const handlePutCorredor = async () => {
         <Text style={styles.label}>Data de Nascimento</Text>
         <TouchableOpacity onPress={openDatePicker}>
           <View style={styles.input}>
-            <Text style={styles.dataplaceholder}>{dob ? formatDate(dob) : 'Selecione a Data'}</Text>
+            <Text style={styles.dataplaceholder}>
+              {dob ? formatDate(dob) : 'Selecione a Data'}
+            </Text>
           </View>
-          <Icon name="calendar" size={20} color="#000" />
         </TouchableOpacity>
         {showDatePicker && (
           <DateTimePicker
-            value={dob}
+            value={dob || new Date()} // Valor inicial
             mode="date"
             display="default"
             onChange={handleDateChange}
+            maximumDate={new Date()} // Bloqueia datas futuras
           />
         )}
       </View>
@@ -464,52 +437,72 @@ const handlePutCorredor = async () => {
   );
 }
 
-// Definindo os estilos usando StyleSheet.create()
+const { width, height } = Dimensions.get('window');
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 20,
-    backgroundColor: '#F0F8FF', // Gradiente suave
+    padding: width * 0.05, // 5% da largura da tela
+    backgroundColor: '#F0F8FF',
+    justifyContent: 'flex-start', // Garante que o conteúdo comece do topo
   },
-  // Estilo para o botão de voltar
   backButton: {
-    marginBottom: 1, // Espaçamento abaixo do botão
-    top: 5, // Espaçamento acima do botão
-    left: 1, // Espaçamento à esquerda do botão
+    top: height * 0.01, // 1% da altura da tela
+    left: width * 0.02, // 2% da largura da tela
   },
-
   title: {
-    fontSize: 40,
+    fontSize: width * 0.09, // 8% da largura da tela
     fontWeight: 'bold',
     textAlign: 'center',
-    marginBottom: 5,
-    color: '#007BFF', 
+    marginBottom: height * 0.005, // 2% da altura da tela
+    color: '#007BFF',
   },
-
-  margem:{
-    marginBottom: 0,
-  },  
-  // Estilo para o contêiner do ícone
   iconContainer: {
-    width: 200, // Largura fixa de 200 pixels
-    height: 100, // Altura fixa de 100 pixels
-    borderColor: '#ccc', // Cor da borda
-    borderWidth: 1, // Largura da borda de 1 pixel
-    justifyContent: 'center', // Centraliza os itens verticalmente
-    alignItems: 'center', // Centraliza os itens horizontalmente
-    overflow: 'hidden', // Oculta partes do conteúdo que ultrapassam os limites do contêiner
-    marginBottom: 20, // Espaçamento abaixo do contêiner do ícone
+    width: width * 0.5, // 50% da largura da tela
+    height: height * 0.2, // 20% da altura da tela
+    borderColor: '#ccc',
+    borderWidth: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    overflow: 'hidden',
+    marginBottom: height * 0.02, // 2% da altura da tela
   },
-  dataplaceholder: {
-    lineHeight: 50, // Alinha o texto verticalmente ao campo
-    fontSize: 16,
-    color: '#333',
+  input: {
+    width: '100%',
+    height: height * 0.07, // 7% da altura da tela
+    borderColor: '#ccc',
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: width * 0.03, // 3% da largura da tela
+    backgroundColor: '#ffffff',
+    marginBottom: height * 0.01, // 1% da altura da tela
   },
   buttonContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 20,
-  }, 
+    flexDirection: 'row', // Coloca os botões lado a lado
+    justifyContent: 'space-between', // Espaçamento uniforme entre os botões
+    marginTop: height * 0.02, // 2% da altura da tela
+  },
+  button: {
+    flex: 1, // Faz os botões terem tamanhos iguais
+    backgroundColor: '#007BFF',
+    padding: height * 0.02, // 1.5% da altura da tela
+    borderRadius: 10,
+    alignItems: 'center',
+    marginHorizontal: width * 0.02, // 2% da largura da tela entre os botões
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowRadius: 5,
+    elevation: 4,
+  },
+  buttonText: {
+    color: '#fff',
+    fontSize: width * 0.04, // 4% da largura da tela
+  },
+  dataplaceholder: {
+    fontSize: width * 0.04, // 4% da largura da tela
+    lineHeight: height * 0.07, // Centraliza o texto verticalmente, ajustando a altura da linha para igualar à altura do campo
+    width: '100%', // Garante que o texto ocupe toda a largura disponível
+  },
   suggestionsContainer: {
     position: 'absolute',
     top: 75, // Altere este valor conforme necessário
@@ -526,50 +519,18 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#ccc',
   },
-  label: {
-    fontSize: 16, // Tamanho da fonte do rótulo
-    marginBottom: 5, // Espaçamento abaixo do rótulo
-  },
-  button: {
-    width: '40%',
-    backgroundColor: '#007BFF',
-    padding: 15,
-    borderRadius: 10,
-    alignItems: 'center',
-    marginTop: 1,
-    marginBottom: 20,
-    alignSelf: 'center',
-    shadowColor: '#000',
-    shadowOpacity: 0.2,
-    shadowRadius: 5,
-    elevation: 4, // Para Android
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 16,
-  },
-  input: {
-    width: '100%',
-    height: 50,
-    borderColor: '#ccc',
-    borderWidth: 1,
-    borderRadius: 10,
-    paddingHorizontal: 10,
-    backgroundColor: '#f7f7f7',
-    marginBottom: 3,
-  },
   pickerContainer: {
-    width: '100%', // Garante que o contêiner ocupe a largura completa
+    width: '100%',
     borderColor: '#ccc',
     borderWidth: 1,
     borderRadius: 10,
-    paddingHorizontal: 10,
-    backgroundColor: '#f7f7f7',
-    marginBottom: 5, // Espaçamento abaixo do contêiner
+    paddingHorizontal: width * 0.03, // 3% da largura da tela
+    backgroundColor: '#ffffff',
+    marginBottom: height * 0.01, // 1% da altura da tela
   },
   picker: {
     width: '100%',
-    height: 50, // Ajuste a altura para que combine com o layout
-    backgroundColor: '#f7f7f7', // Cor de fundo do Picker
+    height: height * 0.075, // 6% da altura da tela, igual ao TextInput
+    backgroundColor: '#ffffff',
   },
 });

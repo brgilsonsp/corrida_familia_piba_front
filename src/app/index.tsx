@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Alert, View, Text, TextInput, TouchableOpacity, Image, Modal, AppState, AppStateStatus, StyleSheet } from 'react-native';
+import { Alert, View, Text, TextInput, TouchableOpacity, Image, Modal, StyleSheet, Dimensions } from 'react-native';
 import { useRouter } from 'expo-router';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import usePostCorredores from './AtualizarDados'
+import usePostCorredores from './AtualizarDados';
+import useHandleAppState from './ApagaUserName';
+import { initializeDatabase } from './initializeDatabase';
 
 export default function Home() {
   const router = useRouter();
@@ -11,28 +13,29 @@ export default function Home() {
   const [isModalVisible, setModalVisible] = useState(false); // Modal para capturar o nome
   const [isPasswordModalVisible, setPasswordModalVisible] = useState(false); // Modal para senha
   const [password, setPassword] = useState(''); // Armazena a senha digitada
-  const correctPassword = 'corrida123'; // Senha correta definida
+  const correctPassword = 'Corrida123'; // Senha correta definida
+  const { postLargadas, postChegadas } = usePostCorredores();
+  
+  useHandleAppState()  
 
-  // Gerencia estado AsyncStorage e limpa dados no AppState
+  // Usar o useEffect para chamar a função apenas quando o app for aberto pela primeira vez
   useEffect(() => {
-    const handleAppStateChange = async (nextAppState: AppStateStatus) => {
-      if (nextAppState === 'background' || nextAppState === 'inactive') {
-        try {
-          await AsyncStorage.removeItem('userName');
-          console.log('Username removido com sucesso!');
-        } catch (error) {
-          console.error('Erro ao limpar username', error);
-        }
+    const checkDatabaseInitialization = async () => {
+      const hasInitialized = await AsyncStorage.getItem('database_initialized');
+
+      if (!hasInitialized) {
+        // Chama a função para inicializar o banco de dados
+        await initializeDatabase();
+
+        // Marca o banco como inicializado
+        await AsyncStorage.setItem('database_initialized', 'true');
       }
     };
 
-    const subscription = AppState.addEventListener('change', handleAppStateChange);
-
-    return () => {
-      subscription.remove();
-    };
+    checkDatabaseInitialization();
   }, []);
 
+  // Usar o useEffect para buscar o userName local
   useEffect(() => {
     const loadStoredUserName = async () => {
       try {
@@ -78,8 +81,7 @@ export default function Home() {
     }
   };
 
-  const { postLargadas, postChegadas } = usePostCorredores();
-
+  // Função para Enviar os dados para a API que faz a pesistência no banco de dados
   const handleEnviarDados = async () => {
     try {
       // Agora, você pode chamar as funções postLargadas e postChegadas diretamente
@@ -99,8 +101,7 @@ export default function Home() {
       <Modal
         animationType="slide"
         transparent={true}
-        visible={isModalVisible}
-        onRequestClose={() => setModalVisible(false)}>
+        visible={isModalVisible}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContainer}>
             <Text style={styles.modalText}>Por favor, insira seu nome:</Text>
@@ -159,15 +160,15 @@ export default function Home() {
         <TouchableOpacity
           style={styles.button}
           onPress={() => router.push('/Classificacao')}>
-          <Icon name="stars" size={20} color="#fff" />
-          <Text style={styles.buttonText}>Classificação</Text>
+          <Icon name="leaderboard" size={20} color="#fff" />
+          <Text style={styles.buttonText}>Classificação offline</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
           style={styles.button}
           onPress={() => router.push('/ClassificacaoGeral')}>
           <Icon name="leaderboard" size={20} color="#fff" />
-          <Text style={styles.buttonText}>Classificação Geral</Text>
+          <Text style={styles.buttonText}>Classificação geral online</Text>
         </TouchableOpacity>
       </View>
 
@@ -180,20 +181,28 @@ export default function Home() {
         </TouchableOpacity>
       </View>
 
+      {/* Rodapé com a versão */}
+      <View style={styles.footer}>
+        <Text style={styles.footerText}>V. 1.0.0 - TESTE</Text>
+      </View>
+      
       <TouchableOpacity
         style={styles.configButton}
         onPress={handleSettingsPress}
       >
-        <Icon name="settings" size={30} color="#fff" />
+        <Icon name="settings" size={25} color="#fff" />
       </TouchableOpacity>
+
     </View>
   );
 }
 
+const { width, height } = Dimensions.get('window');
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 20,
+    padding: width * 0.05, 
     backgroundColor: '#F0F8FF',
     justifyContent: 'flex-start',
   },
@@ -204,8 +213,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   modalContainer: {
-    width: '80%',
-    padding: 25,
+    width: width * 0.8, 
+    height: height * 0.25,  
+    padding: width * 0.07,  
     backgroundColor: '#FFFFFF',
     borderRadius: 15,
     shadowColor: '#000',
@@ -213,52 +223,66 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     elevation: 5,
     alignItems: 'center',
+    justifyContent: 'center', 
   },
   modalText: {
-    fontSize: 18,
+    fontSize: 16, 
     color: '#333',
-    marginBottom: 15,
+    marginBottom: width * 0.04, 
     textAlign: 'center',
   },
-  userName: {
-    fontSize: 25,
-    fontWeight: 'bold',
-    color: '#333',
-    position: 'absolute',
-    top: 20,
-    left: 20,
-  },
-  configButton: {
-    position: 'absolute',
-    top: 20,
-    right: 20,
+  modalButton: {
+    width: width * 0.5, 
     backgroundColor: '#007BFF',
-    padding: 10,
-    borderRadius: 30,
-    elevation: 10,
-    zIndex: 1,
-  },
-  buttonRow: {
-    top: 30,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 10,
-  },
-  button: {
-    width: '48%',
-    backgroundColor: '#007BFF',
-    padding: 35,
+    paddingVertical: width * 0.03, 
     borderRadius: 10,
     alignItems: 'center',
+    justifyContent: 'center',
     shadowColor: '#000',
     shadowOpacity: 0.2,
     shadowRadius: 5,
     elevation: 4,
   },
-  modalButton: {
-    width: '80%',
+  input: {
+    width: width * 0.7, 
+    height: height * 0.06, 
+    borderColor: '#ccc',
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: width * 0.03, 
+    marginBottom: height * 0.025, 
+    backgroundColor: '#f7f7f7',
+  },
+  userName: {
+    fontSize:25, 
+    fontWeight: 'bold',
+    color: '#333',
+    position: 'absolute',
+    top: width * 0.06,
+    left: height * 0.02,
+  },
+  configButton: {
+    position: 'absolute',
+    top: height * 0.025, 
+    right: width * 0.04, 
     backgroundColor: '#007BFF',
-    padding: 15,
+    padding: width * 0.025, 
+    borderRadius: 30,
+    elevation: 10,
+    zIndex: 1,
+  },
+  buttonRow: {
+    top: height * 0.03, 
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginVertical: height * 0.005, 
+    marginHorizontal: width * 0.05
+  },
+  button: {
+    width: width * 0.388, 
+    height: '100%', 
+    backgroundColor: '#007BFF',
+    padding: width * 0.065,
     borderRadius: 10,
     alignItems: 'center',
     shadowColor: '#000',
@@ -268,23 +292,24 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     color: '#fff',
-    fontSize: 16,
-  },
-  input: {
-    width: '100%',
-    height: 50,
-    borderColor: '#ccc',
-    borderWidth: 1,
-    borderRadius: 10,
-    paddingHorizontal: 10,
-    marginBottom: 20,
-    backgroundColor: '#f7f7f7',
+    fontSize: 15, 
+    textAlign: 'center'
   },
   image: {
-    width: 150,
-    height: 150,
-    marginBottom: 20,
+    width: 150, 
+    height: 150, 
+    marginBottom: width * 0.01, 
     alignSelf: 'center',
-    marginTop: 50,
+    marginTop: width * 0.2, 
+  },
+  footer: {
+    position: 'fixed',
+    top: width * 0.2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  footerText: {
+    fontSize: 15,
+    color: '#555',
   },
 });

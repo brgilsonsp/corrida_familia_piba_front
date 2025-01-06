@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "corrida_familia_piba_front",
+    "name": "Cronômetro",
     "slug": "corrida_familia_piba_front",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -10,17 +10,18 @@
     "newArchEnabled": true,
     "splash": {
       "image": "./assets/cronometro.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "resizeMode": "contain"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "."
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/cronometro.png",
-        "backgroundColor": "#ffffff"
-      }
+        "backgroundColor": "#007BFF"
+      },
+      "package": "com.develvis.corrida_familia_piba_front"
     },
     "web": {
       "bundler": "metro",
@@ -29,10 +30,19 @@
     },
     "plugins": [
       "expo-router",
-      "expo-sqlite"
+      "expo-sqlite",
+      "expo-font"
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "79c0322c-28b0-467b-9701-e7410460d833"
+      }
     }
   }
 }
