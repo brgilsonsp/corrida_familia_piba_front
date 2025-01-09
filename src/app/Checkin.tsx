@@ -4,8 +4,6 @@ import Icon from 'react-native-vector-icons/FontAwesome';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Picker } from '@react-native-picker/picker';
 import { useRouter } from 'expo-router';
-import AsyncStorage from '@react-native-async-storage/async-storage'; // Importar AsyncStorage
-import useHandleAppState from './ApagaUserName';
 
 interface Corredor {
   id_atleta: string;
@@ -34,8 +32,6 @@ export default function Checkin() {
   const [isNumberEditable, setIsNumberEditable] = useState(true);
   const [isCpfOrRneEditable, setIsCpfOrRneEditable] = useState(true);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-
-  useHandleAppState()
 
   // Carregar a URL base salva
   useEffect(() => {
@@ -396,7 +392,7 @@ const handlePutCorredor = async () => {
       {/* Campo Gênero */}
       <View style={styles.margem}>
         <Text style={styles.label}>Sexo</Text>
-        <View style={styles.pickerContainer}>  {/* Contêiner com borda */}
+        <View style={styles.pickerContainer}> 
           <Picker
             selectedValue={gender}
             onValueChange={(itemValue) => setGender(itemValue)}
@@ -412,7 +408,7 @@ const handlePutCorredor = async () => {
       {/* Campo Modalidade */}
       <View style={styles.margem}>
         <Text style={styles.label}>Modalidade</Text>
-        <View style={styles.pickerContainer}>  {/* Contêiner com borda */}
+        <View style={styles.pickerContainer}> 
           <Picker
             selectedValue={modalidade}
             onValueChange={(itemValue) => setModalidade(itemValue)}

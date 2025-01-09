@@ -7,7 +7,6 @@ import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from 'expo-file-system'; // Para salvar arquivos localmente
 import * as Sharing from 'expo-sharing'; // Para compartilhar arquivos
-import { useHandleAppStateCsv } from './ApagaUserName';
 
 
 export default function ClassificacaoGeral() {
@@ -19,8 +18,6 @@ export default function ClassificacaoGeral() {
   const [segmentacao, setSegmentacao] = useState({ sexo: [], range_idade: [] });
   const [modalVisible, setModalVisible] = useState(false);
   const [isSharing, setIsSharing] = useState(false); // Controle para compartilhamento
-
-  useHandleAppStateCsv(isSharing);
 
   // Carregar a URL base salva
   useEffect(() => {
@@ -117,13 +114,10 @@ export default function ClassificacaoGeral() {
     const fileUri = FileSystem.documentDirectory + 'resultados.csv';
 
     try {
-      setIsSharing(true); // Define que o compartilhamento está ativo
       await FileSystem.writeAsStringAsync(fileUri, csvContent);
       await Sharing.shareAsync(fileUri);
     } catch (error) {
       console.error('Erro ao gerar ou compartilhar o CSV:', error);
-    } finally {
-      setIsSharing(false); // Redefine o estado após o compartilhamento
     }
   };
   

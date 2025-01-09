@@ -4,20 +4,18 @@ import { useRouter } from 'expo-router';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import usePostCorredores from './AtualizarDados';
-import useHandleAppState from './ApagaUserName';
 import { initializeDatabase } from './initializeDatabase';
+import {useUserContext} from './UserContext'
 
 export default function Home() {
   const router = useRouter();
-  const [userName, setUserName] = useState(''); // Armazena o nome do usuário
+  const { userName, setUserName } = useUserContext(); // Acessa o contexto
   const [isModalVisible, setModalVisible] = useState(false); // Modal para capturar o nome
   const [isPasswordModalVisible, setPasswordModalVisible] = useState(false); // Modal para senha
   const [password, setPassword] = useState(''); // Armazena a senha digitada
   const correctPassword = 'Corrida123'; // Senha correta definida
   const { postLargadas, postChegadas } = usePostCorredores();
   
-  useHandleAppState()  
-
   // Usar o useEffect para chamar a função apenas quando o app for aberto pela primeira vez
   useEffect(() => {
     const checkDatabaseInitialization = async () => {
@@ -35,34 +33,19 @@ export default function Home() {
     checkDatabaseInitialization();
   }, []);
 
-  // Usar o useEffect para buscar o userName local
+  // Usar o useEffect para verificar se o nome do usuário já foi salvo
   useEffect(() => {
-    const loadStoredUserName = async () => {
-      try {
-        const storedUserName = await AsyncStorage.getItem('userName');
-        if (storedUserName) {
-          setUserName(storedUserName);
-        } else {
-          setModalVisible(true); // Exibe modal se não tiver usuário salvo
-        }
-      } catch (error) {
-        console.error('Erro ao carregar AsyncStorage', error);
-      }
-    };
+    if (!userName) {
+      setModalVisible(true); // Se o nome não estiver preenchido, abre o modal
+    }
+  }, [userName]);
 
-    loadStoredUserName();
-  }, []);
-
-  // Função para salvar o nome no AsyncStorage
-  const handleNameSubmit = async () => {
+  // Função para salvar o nome no estado
+  const handleNameSubmit = () => {
     if (userName.trim()) {
-      try {
-        await AsyncStorage.setItem('userName', userName);
-        console.log('Nome salvo com sucesso!');
-        setModalVisible(false);
-      } catch (error) {
-        console.error('Erro ao salvar nome no AsyncStorage', error);
-      }
+      setModalVisible(false);
+    } else {
+      alert('Nome inválido. Por favor, insira um nome.');
     }
   };
 
@@ -143,14 +126,14 @@ export default function Home() {
       <View style={styles.buttonRow}>
         <TouchableOpacity
           style={styles.button}
-          onPress={() => router.push(`/Cronometro?userName=${userName}`)}>
+          onPress={() => router.push(`/Cronometro`)}>
           <Icon name="timer" size={20} color="#fff" />
           <Text style={styles.buttonText}>Cronômetro</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
           style={styles.button}
-          onPress={() => router.push(`/Checkin?monitor=${userName}`)}>
+          onPress={() => router.push(`/Checkin`)}>
           <Icon name="check-circle" size={20} color="#fff" />
           <Text style={styles.buttonText}>Check in</Text>
         </TouchableOpacity>

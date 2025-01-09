@@ -1,5 +1,6 @@
+
 import React, { useState, useEffect,useRef, useCallback } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Alert, StyleSheet } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, Alert, StyleSheet, ScrollView, Modal, FlatList, ActivityIndicator } from 'react-native';
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import * as DocumentPicker from 'expo-document-picker';
@@ -8,8 +9,7 @@ import Icon from 'react-native-vector-icons/FontAwesome';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import useServerTime from './useServerTime'; // Certifique-se de que o hook está correto
-import  { clearDatabase } from './initializeDatabase';
-import useHandleAppState from './ApagaUserName';
+import  { deleteCorredorByNumber, updateCorredoresNoBanco, clearDatabase, getAllCorredores, Cronometro } from './initializeDatabase';
 
 export default function ConfiguracaoScreen () {
   const router = useRouter();
@@ -24,9 +24,10 @@ export default function ConfiguracaoScreen () {
   const animationFrameId = useRef<number | null>(null);  // Ref para armazenar o ID do requestAnimationFrame
   const lastTimeRef = useRef(0);  // Ref para armazenar o tempo do último quadro
   const startTimeRef = useRef(0);  // Ref para armazenar o tempo inicial do cronômetro
+  const [modalVisible, setModalVisible] = useState(false);
+  const [databaseTable, setDatabaseTable] = useState<Cronometro[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
   
-  useHandleAppState()
-
   useEffect(() => {
     const fetchUserName = async () => {
       try {
@@ -154,65 +155,65 @@ export default function ConfiguracaoScreen () {
   };
 
   // Formatar o tempo em "hh:mm:ss:ms"
-    const formatTimeToDisplay = useCallback((time: number) => {
-      const totalSeconds = Math.floor(time / 1000);
-      const milliseconds = Math.floor((time % 1000) / 10);
-      const hours = String(Math.floor(totalSeconds / 3600)).padStart(2, '0');
-      const minutes = String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, '0');
-      const seconds = String(totalSeconds % 60).padStart(2, '0');
-      const msString = String(milliseconds).padStart(2, '0');
-      return `${hours}:${minutes}:${seconds}.${msString}`;
-    }, []);
-  
-    // Configuração de cronômetro baseado no serverTime
-    useEffect(() => {
-      if (serverTime) {
-        const [hours, minutes, seconds] = serverTime.split(':').map(Number);
-        const serverStartTime = (hours * 3600 + minutes * 60 + seconds) * 1000;
-        setCurrentTime(serverStartTime); // Define o tempo inicial
-        startTimeRef.current = serverStartTime;  // Armazenar o tempo inicial
-      }
-    }, [serverTime]);
-  
-    const updateTime = useCallback(() => {
-      const now = performance.now();  // Obtém o tempo atual em milissegundos (preciso)
-      const delta = now - lastTimeRef.current;  // Calcula o tempo passado desde a última atualização
-  
-      // Atualiza o tempo com base na diferença real
-      setCurrentTime((prevTime) => prevTime + delta);
-  
-      // Armazena o tempo atual para a próxima atualização
-      lastTimeRef.current = now;
-  
-      // Solicita o próximo quadro com requestAnimationFrame
+  const formatTimeToDisplay = useCallback((time: number) => {
+    const totalSeconds = Math.floor(time / 1000);
+    const milliseconds = Math.floor((time % 1000) / 10);
+    const hours = String(Math.floor(totalSeconds / 3600)).padStart(2, '0');
+    const minutes = String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, '0');
+    const seconds = String(totalSeconds % 60).padStart(2, '0');
+    const msString = String(milliseconds).padStart(2, '0');
+    return `${hours}:${minutes}:${seconds}.${msString}`;
+  }, []);
+
+  // Configuração de cronômetro baseado no serverTime
+  useEffect(() => {
+    if (serverTime) {
+      const [hours, minutes, seconds] = serverTime.split(':').map(Number);
+      const serverStartTime = (hours * 3600 + minutes * 60 + seconds) * 1000;
+      setCurrentTime(serverStartTime); // Define o tempo inicial
+      startTimeRef.current = serverStartTime;  // Armazenar o tempo inicial
+    }
+  }, [serverTime]);
+
+  const updateTime = useCallback(() => {
+    const now = performance.now();  // Obtém o tempo atual em milissegundos (preciso)
+    const delta = now - lastTimeRef.current;  // Calcula o tempo passado desde a última atualização
+
+    // Atualiza o tempo com base na diferença real
+    setCurrentTime((prevTime) => prevTime + delta);
+
+    // Armazena o tempo atual para a próxima atualização
+    lastTimeRef.current = now;
+
+    // Solicita o próximo quadro com requestAnimationFrame
+    animationFrameId.current = requestAnimationFrame(updateTime);
+  }, []);
+
+  useEffect(() => {
+    if (serverTime) {
+      const start = performance.now();
+      lastTimeRef.current = start; // Inicializa o último tempo registrado
       animationFrameId.current = requestAnimationFrame(updateTime);
-    }, []);
-  
-    useEffect(() => {
-      if (serverTime) {
-        const start = performance.now();
-        lastTimeRef.current = start; // Inicializa o último tempo registrado
-        animationFrameId.current = requestAnimationFrame(updateTime);
+    }
+
+    return () => {
+      if (animationFrameId.current !== null) {
+        cancelAnimationFrame(animationFrameId.current);
       }
-  
-      return () => {
-        if (animationFrameId.current !== null) {
-          cancelAnimationFrame(animationFrameId.current);
-        }
-      };
-    }, [updateTime, serverTime]);
-  
-    useEffect(() => {
-      // Inicia a animação com requestAnimationFrame
-      animationFrameId.current = requestAnimationFrame(updateTime);
-  
-      // Limpeza ao desmontar o componente
-      return () => {
-        if (animationFrameId.current !== null) {
-          cancelAnimationFrame(animationFrameId.current);
-        }
-      };
-    }, [updateTime]);
+    };
+  }, [updateTime, serverTime]);
+
+  useEffect(() => {
+    // Inicia a animação com requestAnimationFrame
+    animationFrameId.current = requestAnimationFrame(updateTime);
+
+    // Limpeza ao desmontar o componente
+    return () => {
+      if (animationFrameId.current !== null) {
+        cancelAnimationFrame(animationFrameId.current);
+      }
+    };
+  }, [updateTime]);
 
   // Valida se a hora inserida está no formato correto
   const validateTimeFormat = (timeStr) => {
@@ -247,60 +248,46 @@ export default function ConfiguracaoScreen () {
     );
   };
 
-  const validateDatabase = async (dbPath: string): Promise<boolean> => {
+  // Função para obter o caminho do banco de dados
+  const getDatabasePath = () => `${FileSystem.documentDirectory}SQLite/cronometro`;
+
+  // Função para validar se um arquivo é um banco SQLite
+  const validateDatabase = async (filePath) => {
     try {
-      // Verifica se o caminho do banco de dados é válido
-      if (!dbPath || dbPath.trim() === '') {
-        Alert.alert('Erro', 'Caminho do banco de dados inválido.');
+      const fileInfo = await FileSystem.getInfoAsync(filePath);
+      if (!fileInfo.exists) {
+        console.error('Arquivo não encontrado:', filePath);
         return false;
       }
-  
-      // Verificando a existência do banco de dados
-      const dbExists = await FileSystem.getInfoAsync(dbPath);
-      console.log(`Verificando banco de dados em: ${dbPath}`);
-  
-      if (!dbExists.exists) {
-        Alert.alert('Erro', 'Banco de dados não encontrado.');
-        console.log('Banco de dados não encontrado no caminho:', dbPath);
-        return false;
-      }
-  
-      const dbSize = dbExists.size || 0;
-      if (dbSize === 0) {
-        Alert.alert('Erro', 'Banco de dados está vazio ou corrompido.');
-        console.log('Banco de dados vazio ou corrompido em:', dbPath);
-        return false;
-      }
-  
-      return true; // O banco de dados parece válido
+      // Adicione validações adicionais, se necessário
+      return true;
     } catch (error) {
-      Alert.alert('Erro', `NOBRIDGE ERROR: Erro ao validar o banco de dados.\n${error.message}`);
-      console.error('Erro ao validar o banco de dados:', error);
+      console.error('Erro ao validar banco de dados:', error);
       return false;
     }
   };
-  
-  const getDatabasePath = () => {
-    return FileSystem.documentDirectory + 'cronometro.db'; // Caminho do banco de dados
-  };
-  
+
+  // Função para exportar o banco de dados
   const handleExportDatabase = async () => {
     try {
       const dbPath = getDatabasePath(); // Caminho do banco de dados
-      const exportPath = FileSystem.cacheDirectory + 'cronometro_exportado.db'; // Caminho temporário para exportação
-  
+      const exportPath = FileSystem.cacheDirectory + 'cronometro.db'; // Caminho temporário para exportação
+
       console.log(`Exportando banco de dados de: ${dbPath} para: ${exportPath}`);
-  
+
       // Validação antes da exportação
       const isValid = await validateDatabase(dbPath);
-      if (!isValid) return;
-  
+      if (!isValid) {
+        Alert.alert('Erro', 'Banco de dados não encontrado ou inválido.');
+        return;
+      }
+
       // Copia o banco de dados para o local de exportação
       await FileSystem.copyAsync({
         from: dbPath,
         to: exportPath,
       });
-  
+
       // Compartilha o arquivo exportado
       await Sharing.shareAsync(exportPath);
       Alert.alert('Sucesso', 'Banco de dados exportado com sucesso!');
@@ -309,51 +296,110 @@ export default function ConfiguracaoScreen () {
       console.error('Erro ao exportar o banco de dados:', error);
     }
   };
-  
+
+  // Função para importar um banco de dados
   const handleImportDatabase = async () => {
     try {
       // Abre o seletor de documentos para escolher o banco de dados
       const result = await DocumentPicker.getDocumentAsync({
-        type: 'application/octet-stream', // Tipo de arquivo SQLite
+        type: '*/*', // Permitir todos os tipos de arquivo (ajustável para SQLite específico)
       });
-  
+
       // Verifica se o usuário cancelou a importação ou não selecionou nenhum arquivo
       if (result.type === 'cancel' || !result.uri) {
         console.log('Importação cancelada ou nenhum arquivo selecionado.');
-        return; // Não exibe mensagem se nada for importado
+        return;
       }
-  
+
       console.log('Arquivo selecionado para importação:', result.uri);
-  
+
       // Validação do arquivo selecionado antes da importação
       const isValidImport = await validateDatabase(result.uri);
       if (!isValidImport) {
         Alert.alert('Erro', 'Arquivo selecionado não é um banco de dados válido.');
         return;
       }
-  
+
       const dbPath = getDatabasePath(); // Caminho do banco de dados
-  
+
       // Copia o arquivo selecionado para o local do banco de dados
       await FileSystem.copyAsync({
         from: result.uri,
         to: dbPath,
       });
-  
+
       Alert.alert('Sucesso', 'Banco de dados importado com sucesso!');
     } catch (error) {
       Alert.alert('Erro', 'Falha ao importar o banco de dados.');
       console.error('Erro ao importar o banco de dados:', error);
     }
-  };  
+  };
+
+  // Função para abrir o modal e carregar os dados do banco
+  const openModal = async () => {
+    const corredores = await getAllCorredores();  // Buscar dados do banco
+    setDatabaseTable(corredores);  // Armazenar no estado
+    setModalVisible(true);  // Abrir o modal
+  };
+
+  // Função para fechar o modal
+  const closeModal = () => {
+    setModalVisible(false);
+  };
+
+  // Função para atualizar os dados do corredor no estado
+  const updateCorredor = (index: number, field: keyof Cronometro, value: string) => {
+    const updatedTable = [...databaseTable];
+    
+    // Verifique se o campo é de tipo string ou número antes de atribuir
+    if (field === "numero_corredor") {
+      updatedTable[index][field] = parseInt(value, 10); // Converte para número
+    } else {
+      updatedTable[index][field] = value; // Deixa como string
+    }
+    
+    setDatabaseTable(updatedTable); // Atualiza o estado com os novos valores
+  };
   
+  // Função para salvar as alterações
+  const saveChanges = async () => {
+    setIsLoading(true); // Ativa o loading
+    const success = await updateCorredoresNoBanco(databaseTable); // Chama a função do arquivo databaseUtils
+    setIsLoading(false); // Desativa o loading após salvar
+
+    if (success) {
+      Alert.alert('Alterações salvas com sucesso!');
+      closeModal(); // Fechar o modal após salvar
+    } else {
+      Alert.alert('Erro ao salvar alterações');
+    }
+  };
+
+  const deleteCorredor = async (index: number) => {
+    const corredor = databaseTable[index]; // Obtenha o corredor baseado no índice
+    const numeroCorredor = parseInt(corredor.numero_corredor, 10); // Garanta que o valor seja um número
+  
+    if (isNaN(numeroCorredor)) {
+      Alert.alert('Erro', 'Número do corredor inválido');
+      return; // Se o número do corredor não for válido, interrompe a exclusão
+    }
+  
+    // Chama a função para excluir o corredor do banco de dados
+    await deleteCorredorByNumber(numeroCorredor);
+  
+    // Após a exclusão no banco de dados, remove o corredor da lista no estado
+    const updatedTable = [...databaseTable]; // Copia os dados atuais
+    updatedTable.splice(index, 1); // Remove o corredor da lista
+    setDatabaseTable(updatedTable); // Atualiza o estado
+  };
+    
   return (
     <View style={styles.container}>
       {/* Botão para voltar */}
       <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
         <Icon name="arrow-left" size={24} color="#000" />
       </TouchableOpacity>
-
+  
       {/* Conteúdo da página */}
       <View style={styles.content}>
         {activeTab === 'editarUrl' && (
@@ -370,7 +416,7 @@ export default function ConfiguracaoScreen () {
             </TouchableOpacity>
           </View>
         )}
-
+  
         {activeTab === 'cronometro' && (
           <View style={styles.tabContent}>
             <Text style={styles.label}>Cronômetro atual:</Text>
@@ -386,7 +432,7 @@ export default function ConfiguracaoScreen () {
             </TouchableOpacity>
           </View>
         )}
-
+  
         {activeTab === 'horaEspecifica' && (
           <View style={styles.tabContent}>
             <Text style={styles.label}>Digite um horário específico:</Text>
@@ -402,9 +448,12 @@ export default function ConfiguracaoScreen () {
             <Text style={styles.label}>Horário salvo: {formatTimeToDisplay(savedTime)}</Text>
           </View>
         )}
+  
         {activeTab === 'bancoDeDados' && (
           <View style={styles.tabContent}>
-            <Text style={styles.label}>Alterar base de dados: </Text>
+            <Text style={styles.label}>Alterar base de dados:</Text>
+
+            {/* Botão para limpar banco de dados */}
             <TouchableOpacity style={styles.button} onPress={handleClearDatabase}>
               <Text style={styles.buttonText}>Limpar banco de dados</Text>
             </TouchableOpacity>
@@ -418,10 +467,108 @@ export default function ConfiguracaoScreen () {
             <TouchableOpacity style={styles.button} onPress={handleExportDatabase}>
               <Text style={styles.buttonText}>Exportar banco de dados</Text>
             </TouchableOpacity>
+
+            {/* Botão para abrir o modal de edição */}
+            <TouchableOpacity style={styles.button} onPress={openModal}>
+              <Text style={styles.buttonText}>Editar banco de dados</Text>
+            </TouchableOpacity>
           </View>
         )}
-      </View>
 
+        {/* Modal para editar tabela */}
+        <Modal
+          animationType="slide"
+          transparent={true}
+          visible={modalVisible}
+          onRequestClose={closeModal}
+        >
+          <View style={styles.modalOverlay2}>
+            <View style={styles.modalContainer2}>
+              <ScrollView horizontal>
+                <View>
+                  {/* Lista de dados do banco para edição */}
+                  <FlatList
+                    data={databaseTable}
+                    keyExtractor={(item, index) => index.toString()}
+                    stickyHeaderIndices={[0]}
+                    ListHeaderComponent={() => (
+                      <View style={styles.tableHeader}>
+                        <Text style={[styles.tableHeaderCell, styles.colNumber]}>Número Corredor</Text>
+                        <Text style={[styles.tableHeaderCell, styles.colMonitor]}>Monitor</Text>
+                        <Text style={[styles.tableHeaderCell, styles.colDelay]}>Tempo de Atraso</Text>
+                        <Text style={[styles.tableHeaderCell, styles.colTime]}>Tempo Final</Text>
+                        <Text style={[styles.tableHeaderCell, styles.colDelete]}>Excluir</Text>
+                      </View>
+                    )}
+                    renderItem={({ item, index }) => (
+                      <View style={styles.tableRow}>
+                        {/* Campo para editar o número do corredor */}
+                        <TextInput
+                          style={[styles.tableCell, styles.colNumber]}
+                          value={item.numero_corredor.toString() || "0"}
+                          onChangeText={(text) => updateCorredor(index, 'numero_corredor', text)}
+                        />
+                        {/* Campo para editar o monitor */}
+                        <TextInput
+                          style={[styles.tableCell, styles.colMonitor]}
+                          value={item.monitor || "N/A"}
+                          onChangeText={(text) => updateCorredor(index, 'monitor', text)}
+                        />
+                        {/* Campo para editar o tempo de atraso */}
+                        <TextInput
+                          style={[styles.tableCell, styles.colDelay]}
+                          value={item.tempo_de_atraso || "N/A"}
+                          onChangeText={(text) => updateCorredor(index, 'tempo_de_atraso', text)}
+                        />
+                        {/* Campo para editar o tempo final */}
+                        <TextInput
+                          style={[styles.tableCell, styles.colTime]}
+                          value={item.tempo_final || "N/A"}
+                          onChangeText={(text) => updateCorredor(index, 'tempo_final', text)}
+                        />
+                        {/* Botão para excluir o corredor com ícone */}
+                        <TouchableOpacity
+                          style={styles.deleteButton}
+                          onPress={() => deleteCorredor(index)} // Chama a função para excluir
+                        >
+                          <Icon name="trash" size={20} color="Black" />
+                        </TouchableOpacity>
+                      </View>
+                    )}
+                  />
+                </View>
+              </ScrollView>
+
+              <View>
+                {/* Botão para salvar alterações */}
+                <TouchableOpacity style={styles.buttonModal} onPress={saveChanges}>
+                  <Text style={styles.buttonTextModal}>Salvar</Text>
+                </TouchableOpacity>
+
+                {/* Botão para cancelar alterações */}
+                <TouchableOpacity style={styles.buttonModal} onPress={closeModal}>
+                  <Text style={styles.buttonTextModal}>Cancelar</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+
+          {/* Modal de Loading */}
+          <Modal
+            transparent={true}
+            visible={isLoading} // Exibe o modal de loading apenas quando isLoading for true
+            animationType="fade"
+          >
+            <View style={styles.modalOverlay}>
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color="#0000ff" />
+                <Text style={styles.loadingText}>Salvando alterações...</Text>
+              </View>
+            </View>
+          </Modal>
+        </Modal>
+      </View>
+  
       {/* Menu de abas na parte inferior */}
       <View style={styles.tabs}>
         <TouchableOpacity
@@ -443,19 +590,19 @@ export default function ConfiguracaoScreen () {
           onPress={() => setActiveTab('horaEspecifica')}
         >
           <Icon name="clock-o" size={20} color={activeTab === 'horaEspecifica' ? '#fff' : '#34495E'} />
-          <Text style={[styles.tabText, activeTab === 'horaEspecifica' && styles.activeTabText]}>Hora</Text>
-          <Text style={[styles.tabText, activeTab === 'horaEspecifica' && styles.activeTabText]}>Específica</Text>
+          <Text style={[styles.tabText, activeTab === 'horaEspecifica' && styles.activeTabText]}>Hora Específica</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.tab, activeTab === 'bancoDeDados' && styles.activeTab]}
-          onPress={() => setActiveTab('bancoDeDados')}>
+          onPress={() => setActiveTab('bancoDeDados')}
+        >
           <Icon name="database" size={20} color={activeTab === 'bancoDeDados' ? '#fff' : '#34495E'} />
-          <Text style={[styles.tabText, activeTab === 'bancoDeDados' && styles.activeTabText]}>Banco de dados</Text>
+          <Text style={[styles.tabText, activeTab === 'bancoDeDados' && styles.activeTabText]}>Banco de Dados</Text>
         </TouchableOpacity>
       </View>
     </View>
   );
-};
+}  
 
 const styles = StyleSheet.create({
   container: {
@@ -512,19 +659,40 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   button: {
-    width: '100%',
+    width: '80%',
     backgroundColor: '#007BFF',
-    paddingVertical: 15,
+    padding: 15,
     borderRadius: 10,
     alignItems: 'center',
-    marginTop: 10,
+    marginTop: 20,
     marginBottom: 20,
+    alignSelf: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowRadius: 5,
+    elevation: 4, // Para Android
   },
   buttonText: {
-    color: '#FFFFFF',
+    color: 'white',
     fontSize: 16,
-    fontWeight: '600',
-    textTransform: 'uppercase',
+  },
+  buttonModal: {
+    width: '50%',
+    backgroundColor: '#007BFF',
+    padding: 15,
+    borderRadius: 10,
+    alignItems: 'center',
+    marginTop: 20,
+    marginBottom: 20,
+    alignSelf: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowRadius: 5,
+    elevation: 4, // Para Android
+  },
+  buttonTextModal: {
+    color: 'white',
+    fontSize: 16,
   },
   input: {
     width: '100%',
@@ -544,5 +712,96 @@ const styles = StyleSheet.create({
     color: '#007BFF',
     marginBottom: 20,
     textAlign: 'center',
+  },
+  modalOverlay2: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)', // Fundo semitransparente
+  },
+  modalContainer2: {
+    width: '90%',
+    backgroundColor: 'white',
+    borderRadius: 10,
+    padding: 20,
+    maxHeight: '80%',
+  },
+  // Estilo para o cabeçalho da tabela
+  tableHeader: {
+    flexDirection: 'row', // Coloca os elementos do cabeçalho em uma linha horizontal
+    backgroundColor: '#f0f0f0', // Define a cor de fundo do cabeçalho
+    paddingVertical: 15, // Adiciona espaçamento vertical no cabeçalho para deixar mais espaçado
+    borderBottomWidth: 2, // Define a largura da borda inferior do cabeçalho
+    borderBottomColor: '#007BFF', // Cor da borda inferior para dar destaque ao cabeçalho
+  },
+
+  // Estilo para as linhas de dados da tabela
+  tableRow: {
+    flexDirection: 'row', // Coloca as células das linhas de dados em uma linha horizontal
+    paddingVertical: 10, // Adiciona espaçamento vertical para as linhas de dados
+    borderBottomWidth: 1, // Define a largura da borda inferior das linhas de dados
+    borderBottomColor: '#ccc', // Cor da borda inferior para separar visualmente as linhas
+    backgroundColor: '#f0f0f0', // Define a cor de fundo
+  },
+
+  // Estilo para cada célula na linha de dados
+  tableCell: {
+    textAlign: 'center', // Centraliza o texto dentro da célula
+    padding: 10, // Adiciona espaçamento interno na célula para afastar o texto das bordas
+    borderRightWidth: 1, // Define a largura da borda direita para separar visualmente as células
+    borderLeftWidth: 1,
+    borderRightColor: '#ccc', // Cor da borda direita
+    borderLeftColor: '#ccc'
+  },
+
+  // Estilo para cada célula do cabeçalho
+  tableHeaderCell: {
+    fontWeight: 'bold', // Torna o texto do cabeçalho em negrito para diferenciá-lo das células
+    textAlign: 'center', // Centraliza o texto dentro da célula do cabeçalho
+    padding: 10, // Adiciona espaçamento interno para as células do cabeçalho
+    color: '#007BFF', // Define a cor do texto no cabeçalho para destacar
+    borderRightWidth: 1, // Define a largura da borda direita para separar visualmente as células
+    borderLeftWidth: 1,
+    borderRightColor: '#ccc', // Cor da borda direita
+    borderLeftColor: '#ccc'
+  },
+  deleteButton: {
+    left: 28,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  
+  colDelete: { width: 70 },// Largura da coluna de exclusão
+
+  // Estilo para a coluna "Posição" com largura fixa
+  colNumber: { width: 80 }, // Define largura fixa de 60 para a coluna "Posição"
+
+  // Estilo para a coluna "Número" com largura fixa
+  colMonitor: { width: 90 }, // Define largura fixa de 80 para a coluna "Número"
+
+  colDelay: {width: 100 },
+
+  // Estilo para a coluna "Tempo" com largura fixa
+  colTime: { width: 100 }, // Define largura fixa de 100 para a coluna "Tempo"
+
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)', // Fundo semitransparente
+  },
+  loadingContainer: {
+    width: 200,
+    height: 120,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'white',
+    borderRadius: 10,
+    padding: 20,
+  },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 16,
+    color: '#000',
   },
 });

@@ -1,17 +1,17 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { View, Text, Alert, TouchableOpacity, TextInput, Modal, StyleSheet } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import { getCorredorByNumber, insertCorredor,updateCorredor } from './initializeDatabase';
 import useServerTime from './useServerTime';
-import useHandleAppState from './ApagaUserName';
+import { useUserContext } from './UserContext';
 
 export default function Cronometro() {
   const route = useRouter();
   const [runnerNumbers, setRunnerNumbers] = useState(['', '', '', '']);
   const [responseMessages, setResponseMessages] = useState(['', '', '', '']);
-  const [userName, setUserName] = useState('');
+  const { userName } = useUserContext(); // Acesso ao contexto de usuário
   const { serverTime } = useServerTime();
   const [currentTime, setCurrentTime] = useState<number>(0);
   const [modalVisible, setModalVisible] = useState(false);
@@ -21,7 +21,6 @@ export default function Cronometro() {
   const lastTimeRef = useRef(0);  // Ref para armazenar o tempo do último quadro
   const startTimeRef = useRef(0);  // Ref para armazenar o tempo inicial do cronômetro
 
-  useHandleAppState()
 
   // Formatar o tempo em "hh:mm:ss:ms"
   const formatTimeToDisplay = useCallback((time: number) => {
@@ -83,21 +82,6 @@ export default function Cronometro() {
       }
     };
   }, [updateTime]);
-
-  useEffect(() => {
-    const fetchUserName = async () => {
-      try {
-        const storedUserName = await AsyncStorage.getItem('userName');
-        if (storedUserName) {
-          setUserName(storedUserName);
-        }
-      } catch (error) {
-        console.error('Erro ao carregar userName do AsyncStorage', error);
-      }
-    };
-
-    fetchUserName();
-  }, []);
 
   // Verifica se o número do corredor existe no banco de dados e se tem tempos finais ou atrasados
   const checkRunnerStatus = async (runnerNumber) => {

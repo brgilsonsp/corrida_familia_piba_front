@@ -218,3 +218,55 @@ const timeToMilliseconds = (time: string | null) => {
   return (hours * 3600 + minutes * 60 + secs) * 1000 + (ms || 0);
 };
 
+// Função para atualizar os dados no banco de dados
+export async function updateCorredoresNoBanco(data: Cronometro[]) {
+  const db = await openDatabase(); // Abre o banco de dados
+  try {
+    // Para cada corredor alterado, atualize no banco
+    for (const corredor of data) {
+      // Garantir que nenhum valor seja undefined ou null
+      const monitor = corredor.monitor ?? ''; // Se monitor for null ou undefined, define como string vazia
+      const tempoFinal = corredor.tempo_final ?? ''; // Se tempo_final for null ou undefined, define como string vazia
+      const tempoAtraso = corredor.tempo_de_atraso ?? ''; // Se tempo_de_atraso for null ou undefined, define como string vazia
+
+      await db.runAsync(
+        `UPDATE corredor SET monitor = ?, tempo_final = ?, tempo_de_atraso = ? WHERE numero_corredor = ?`,
+        [monitor, tempoFinal, tempoAtraso, corredor.numero_corredor]
+      );
+    }
+    return true; // Retorna true se a atualização for bem-sucedida
+  } catch (error) {
+    console.error('Erro ao salvar alterações no banco:', error);
+    return false; // Retorna false se ocorrer um erro
+  } finally {
+    // Certifique-se de fechar o banco somente após todas as operações terem sido concluídas
+    await db.closeAsync(); // Fechar o banco após a execução
+  }
+}
+
+// Função para excluir um corredor pelo número do corredor
+export async function deleteCorredorByNumber(numero_corredor: number) {
+  const db = await openDatabase(); // Abre a conexão com o banco de dados
+  try {
+    // Verifica se o corredor existe antes de tentar excluir
+    const corredorExistente = await db.getAllAsync(
+      'SELECT 1 FROM corredor WHERE numero_corredor = ?',
+      [numero_corredor]
+    );
+
+    if (Array.isArray(corredorExistente) && corredorExistente.length > 0) {
+      // Excluir o corredor do banco de dados
+      await db.runAsync('DELETE FROM corredor WHERE numero_corredor = ?', [numero_corredor]);
+      Alert.alert('Sucesso', `Corredor ${numero_corredor} excluído com sucesso!`);
+    } else {
+      Alert.alert('Erro', 'Corredor não encontrado');
+    }
+  } catch (error) {
+    console.error('Erro ao excluir corredor:', error);
+    Alert.alert('Erro ao excluir corredor', 'Ocorreu um erro ao tentar excluir o corredor.');
+  } finally {
+    db.closeAsync(); // Fecha a conexão com o banco de dados
+  }
+}
+
+

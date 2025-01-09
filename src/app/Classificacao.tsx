@@ -5,16 +5,12 @@ import { useRouter } from 'expo-router';
 import * as FileSystem from 'expo-file-system'; // Para salvar arquivos localmente
 import * as Sharing from 'expo-sharing'; // Para compartilhar arquivos
 import  searchCorredores  from './initializeDatabase'; // Importar a função searchCorredores
-import {useHandleAppStateCsv} from './ApagaUserName';
 
 export default function Classificacao() {
   const router = useRouter();
   const [numeroCorredor, setNumeroCorredor] = useState('');
   const [results, setResults] = useState([]);
   const [modalVisible, setModalVisible] = useState(false);
-  const [isSharing, setIsSharing] = useState(false); // Controle para compartilhamento
-
-  useHandleAppStateCsv(isSharing);
 
   // Função para buscar corredor por número
   const buscarCorredorPorNumero = async () => {
@@ -57,13 +53,10 @@ export default function Classificacao() {
     const fileUri = FileSystem.documentDirectory + 'resultados.csv';
 
     try {
-      setIsSharing(true); // Inicia o controle de compartilhamento
       await FileSystem.writeAsStringAsync(fileUri, csvContent);
       await Sharing.shareAsync(fileUri);
     } catch (error) {
       console.error('Erro ao compartilhar CSV:', error);
-    } finally {
-      setIsSharing(false); // Finaliza o controle de compartilhamento
     }
   };
 
