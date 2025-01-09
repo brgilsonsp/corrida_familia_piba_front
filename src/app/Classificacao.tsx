@@ -82,7 +82,7 @@ export default function Classificacao() {
       </TouchableOpacity>
 
       <TouchableOpacity style={styles.button} onPress={buscarTodosCorredores}>
-        <Text style={styles.buttonText}>Listar Todos os Corredores</Text>
+        <Text style={styles.buttonText}>Listar todos os corredores</Text>
       </TouchableOpacity>
 
       {/* Modal de Resultados */}
@@ -121,12 +121,14 @@ export default function Classificacao() {
                 )}
               />
             </ScrollView>
-            <TouchableOpacity style={styles.button} onPress={() => setModalVisible(false)}>
-              <Text style={styles.buttonText}>Fechar</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.button} onPress={generateCSV}>
-              <Text style={styles.buttonText}>Gerar CSV</Text>
-            </TouchableOpacity>
+              <View style={styles.buttonContainer}>
+                <TouchableOpacity style={styles.buttonModal} onPress={() => setModalVisible(false)}>
+                  <Text style={styles.buttonText}>Fechar</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.buttonModal} onPress={generateCSV}>
+                  <Text style={styles.buttonText}>Gerar CSV</Text>
+                </TouchableOpacity>
+              </View>
           </View>
         </View>
       </Modal>
@@ -184,9 +186,28 @@ const styles = StyleSheet.create({
     fontSize: 16, // Tamanho da fonte do rótulo
     marginBottom: 5, // Espaçamento abaixo do rótulo
   },
+  buttonContainer: {
+    flexDirection: 'row',  // Alinha os botões na horizontal
+    justifyContent: 'space-between',  // Espaça os botões igualmente
+    marginTop: 10,  // Espaço superior para separação
+  },
   // Estilo geral para os botões
   button: {
-    width: '50%',
+    width: '80%',
+    backgroundColor: '#007BFF',
+    padding: 15,
+    borderRadius: 10,
+    alignItems: 'center',
+    marginTop: 20,
+    marginBottom: 20,
+    alignSelf: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowRadius: 5,
+    elevation: 4, // Para Android
+  },
+  buttonModal: {
+    width: '40%',
     backgroundColor: '#007BFF',
     padding: 15,
     borderRadius: 10,

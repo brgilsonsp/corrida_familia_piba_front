@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, TextInput, TouchableOpacity, Text, FlatList, Alert, StyleSheet, Dimensions } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Picker } from '@react-native-picker/picker';
 import { useRouter } from 'expo-router';
 
@@ -268,14 +269,12 @@ const handlePutCorredor = async () => {
  
   return (
     <View style={styles.container}>
-    <View style={styles.headerContainer}>
-      <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-        <Icon name="arrow-left" size={24} color="#000" />
-      </TouchableOpacity>
-      <TouchableOpacity>
-        <Text style={styles.title}>Check-in</Text>
-      </TouchableOpacity>
-    </View>
+      <View>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+          <Icon name="arrow-left" size={24} color="#000" />
+        </TouchableOpacity>      
+          <Text style={styles.title}>Check-in</Text>
+      </View>
 
       {/* Campo Nome */}
       <View style={styles.margem}>
@@ -444,7 +443,7 @@ const styles = StyleSheet.create({
   },
   backButton: {
     top: height * 0.01, // 1% da altura da tela
-    left: width * 0.02, // 2% da largura da tela
+    left: width * 0.01, // 2% da largura da tela
   },
   title: {
     fontSize: width * 0.09, // 8% da largura da tela

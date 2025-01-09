@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { View, Text, Alert, TouchableOpacity, TextInput, Modal, StyleSheet } from 'react-native';
-import { useRouter, useLocalSearchParams } from 'expo-router';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useRouter } from 'expo-router';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import { getCorredorByNumber, insertCorredor,updateCorredor } from './initializeDatabase';
 import useServerTime from './useServerTime';

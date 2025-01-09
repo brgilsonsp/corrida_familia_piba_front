@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect,useRef, useCallback } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Alert, StyleSheet, ScrollView, Modal, FlatList, ActivityIndicator } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, Alert, StyleSheet, 
+  ScrollView, Modal, FlatList, ActivityIndicator, Dimensions } from 'react-native';
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import * as DocumentPicker from 'expo-document-picker';
@@ -10,12 +11,13 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import useServerTime from './useServerTime'; // Certifique-se de que o hook está correto
 import  { deleteCorredorByNumber, updateCorredoresNoBanco, clearDatabase, getAllCorredores, Cronometro } from './initializeDatabase';
+import { useUserContext } from './UserContext';
 
 export default function ConfiguracaoScreen () {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState('editarUrl');  // Estado para controlar a aba ativa
   const defaultUrl = 'https://hufd66cq2i';
-  const [userName, setUserName] = useState('');
+  const { userName } = useUserContext(); // Acesso ao contexto de usuário
   const [urlBase, setUrlBase] = useState(defaultUrl);
   const { serverTime } = useServerTime();
   const [currentTime, setCurrentTime] = useState(0);
@@ -67,85 +69,131 @@ export default function ConfiguracaoScreen () {
     }
   };
 
-  const handleSaveCurrentTime = async () => {
-    try {
-      const formattedTime = formatTimeToDisplay(currentTime);
-      setSavedTime(currentTime);
-  
-      // Criando o corpo do JSON
-      const payload = {
-        hora: formattedTime,
-        monitor: userName,
-      };
-  
-      // Realizando a requisição POST
-      const response = await fetch(`${urlBase}.execute-api.us-east-1.amazonaws.com/prd/cronometragem/largada_geral`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
+  const handleSaveCurrentTime = () => {
+    Alert.alert(
+      'Confirmação',
+      'Deseja salvar o horário atual?',
+      [
+        {
+          text: 'Não',
+          style: 'cancel',
+          onPress: () => console.log('Ação cancelada pelo usuário.'),
         },
-        body: JSON.stringify(payload),
-      });
+        {
+          text: 'Sim',
+          onPress: async () => {
+            try {
+              const formattedTime = formatTimeToDisplay(currentTime);
+              setSavedTime(currentTime);
   
-      // Verificando o status da resposta
-      if (response.ok) {
-        Alert.alert('Cronômetro salvo com sucesso!', `Hora: ${formattedTime}`);
-        console.log('Cronômetro salvo com sucesso!', `Hora: ${formattedTime}`)
-      } else {
-        const errorData = await response.json();
-        Alert.alert('Erro ao salvar o cronômetro', errorData.message || 'Erro desconhecido');
-        console.log('Erro ao salvar o cronômetro', errorData.message || 'Erro desconhecido');
-      }
-    } catch (error) {
-      console.error('Erro ao salvar o cronômetro:', error);
-      Alert.alert('Erro', 'Ocorreu um erro ao tentar salvar o cronômetro.');
-    }
-  }; 
-
-  const handleEndRace = async () => {
-    const payload = {
-      monitor: userName, // Envia o nome do monitor para a API
-    };
+              const payload = {
+                hora: formattedTime,
+                monitor: userName,
+              };
   
-    try {
-      const response = await fetch(`https://hufd66cq2i.execute-api.us-east-1.amazonaws.com/prd/classificacao/encerrar_corrida`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
+              const response = await fetch(`${urlBase}.execute-api.us-east-1.amazonaws.com/prd/cronometragem/largada_geral`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(payload),
+              });
+  
+              if (response.ok) {
+                Alert.alert('Cronômetro salvo com sucesso!', `Hora: ${formattedTime}`);
+                console.log('Cronômetro salvo com sucesso!', `Hora: ${formattedTime}`);
+              } else {
+                const errorData = await response.json();
+                Alert.alert('Erro ao salvar o cronômetro', errorData.message || 'Erro desconhecido');
+                console.log('Erro ao salvar o cronômetro', errorData.message || 'Erro desconhecido');
+              }
+            } catch (error) {
+              console.error('Erro ao salvar o cronômetro:', error);
+              Alert.alert('Erro', 'Ocorreu um erro ao tentar salvar o cronômetro.');
+            }
+          },
         },
-        body: JSON.stringify(payload),
-      });
+      ],
+      { cancelable: false }
+    );
+  };
   
-      // Verifique se a resposta foi bem-sucedida
-      if (response.ok) {
-        try {
-          const responseData = await response.json();
-          Alert.alert('Corrida encerrada com sucesso');
-          console.log('Corrida encerrada:', responseData);
-        } catch (jsonError) {
-          console.error('Erro ao processar o JSON da resposta:', jsonError);
-          Alert.alert('Erro ao encerrar corrida', 'Falha ao processar a resposta da API.');
-        }
-      } else {
-        // Verifique se há um corpo na resposta para capturar os detalhes do erro
-        const errorData = await response.text();
-        Alert.alert('Erro ao encerrar corrida', errorData || 'Erro desconhecido');
-        console.error('Erro no encerramento da corrida:', errorData);
-      }
-    } catch (error) {
-      console.error('Erro ao realizar requisição:', error);
-      Alert.alert('Erro', 'Falha ao se comunicar com o servidor.');
-    }
-  };  
-
+  const handleEndRace = () => {
+    Alert.alert(
+      'Confirmação',
+      'Deseja encerrar a corrida?',
+      [
+        {
+          text: 'Não',
+          style: 'cancel',
+          onPress: () => console.log('Ação cancelada pelo usuário.'),
+        },
+        {
+          text: 'Sim',
+          onPress: async () => {
+            const payload = {
+              monitor: userName,
+            };
+  
+            try {
+              const response = await fetch(`https://hufd66cq2i.execute-api.us-east-1.amazonaws.com/prd/classificacao/encerrar_corrida`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(payload),
+              });
+  
+              if (response.ok) {
+                try {
+                  const responseData = await response.json();
+                  Alert.alert('Corrida encerrada com sucesso');
+                  console.log('Corrida encerrada:', responseData);
+                } catch (jsonError) {
+                  console.error('Erro ao processar o JSON da resposta:', jsonError);
+                  Alert.alert('Erro ao encerrar corrida', 'Falha ao processar a resposta da API.');
+                }
+              } else {
+                const errorData = await response.text();
+                Alert.alert('Erro ao encerrar corrida', errorData || 'Erro desconhecido');
+                console.error('Erro no encerramento da corrida:', errorData);
+              }
+            } catch (error) {
+              console.error('Erro ao realizar requisição:', error);
+              Alert.alert('Erro', 'Falha ao se comunicar com o servidor.');
+            }
+          },
+        },
+      ],
+      { cancelable: false }
+    );
+  };
+  
   const handleSaveInputTime = () => {
-    if (validateTimeFormat(inputHoraEspecifica)) {
-      const timeInMs = convertTimeToMilliseconds(inputHoraEspecifica);
-      setSavedTime(timeInMs);
-      Alert.alert('Horário salvo com sucesso!', inputHoraEspecifica);
-    } else {
-      Alert.alert('Formato inválido', 'Digite no formato hh:mm:ss:ms');
-    }
+    Alert.alert(
+      'Confirmação',
+      'Deseja salvar o horário inserido?',
+      [
+        {
+          text: 'Não',
+          style: 'cancel',
+          onPress: () => console.log('Ação cancelada pelo usuário.'),
+        },
+        {
+          text: 'Sim',
+          onPress: () => {
+            if (validateTimeFormat(inputHoraEspecifica)) {
+              const timeInMs = convertTimeToMilliseconds(inputHoraEspecifica);
+              setSavedTime(timeInMs);
+              Alert.alert('Horário salvo com sucesso!', inputHoraEspecifica);
+            } else {
+              Alert.alert('Formato inválido', 'Digite no formato hh:mm:ss:ms');
+            }
+          },
+        },
+      ],
+      { cancelable: false }
+    );
   };
 
   // Converte tempo para milissegundos
@@ -503,27 +551,25 @@ export default function ConfiguracaoScreen () {
                     renderItem={({ item, index }) => (
                       <View style={styles.tableRow}>
                         {/* Campo para editar o número do corredor */}
-                        <TextInput
-                          style={[styles.tableCell, styles.colNumber]}
-                          value={item.numero_corredor.toString() || "0"}
-                          onChangeText={(text) => updateCorredor(index, 'numero_corredor', text)}
-                        />
+                        <Text style={[styles.tableCell, styles.colNumber]}>
+                          {item.numero_corredor}
+                        </Text>
                         {/* Campo para editar o monitor */}
                         <TextInput
                           style={[styles.tableCell, styles.colMonitor]}
-                          value={item.monitor || "N/A"}
+                          value={item.monitor || ""}
                           onChangeText={(text) => updateCorredor(index, 'monitor', text)}
                         />
                         {/* Campo para editar o tempo de atraso */}
                         <TextInput
                           style={[styles.tableCell, styles.colDelay]}
-                          value={item.tempo_de_atraso || "N/A"}
+                          value={item.tempo_de_atraso || ""}
                           onChangeText={(text) => updateCorredor(index, 'tempo_de_atraso', text)}
                         />
                         {/* Campo para editar o tempo final */}
                         <TextInput
                           style={[styles.tableCell, styles.colTime]}
-                          value={item.tempo_final || "N/A"}
+                          value={item.tempo_final || ""}
                           onChangeText={(text) => updateCorredor(index, 'tempo_final', text)}
                         />
                         {/* Botão para excluir o corredor com ícone */}
@@ -541,14 +587,16 @@ export default function ConfiguracaoScreen () {
 
               <View>
                 {/* Botão para salvar alterações */}
-                <TouchableOpacity style={styles.buttonModal} onPress={saveChanges}>
-                  <Text style={styles.buttonTextModal}>Salvar</Text>
-                </TouchableOpacity>
+                <View style={styles.buttonContainer}>
+                  <TouchableOpacity style={styles.buttonModal} onPress={saveChanges}>
+                    <Text style={styles.buttonTextModal}>Salvar</Text>
+                  </TouchableOpacity>
 
-                {/* Botão para cancelar alterações */}
-                <TouchableOpacity style={styles.buttonModal} onPress={closeModal}>
-                  <Text style={styles.buttonTextModal}>Cancelar</Text>
-                </TouchableOpacity>
+                  {/* Botão para cancelar alterações */}
+                  <TouchableOpacity style={styles.buttonModal} onPress={closeModal}>
+                    <Text style={styles.buttonTextModal}>Cancelar</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
             </View>
           </View>
@@ -604,16 +652,18 @@ export default function ConfiguracaoScreen () {
   );
 }  
 
+const { width, height } = Dimensions.get('window');
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F0F8FF',
     justifyContent: 'space-between',
-    padding: 20,
+    padding: width * 0.05,
   },
   backButton: {
-    marginTop: 10,
-    marginBottom: 20,
+    top: height * 0.01, // 1% da altura da tela
+    left: width * 0.01, // 2% da largura da tela
   },
   content: {
     flex: 1,
@@ -658,6 +708,11 @@ const styles = StyleSheet.create({
     color: '#34495E',
     marginBottom: 10,
   },
+  buttonContainer: {
+    flexDirection: 'row',  // Alinha os botões na horizontal
+    justifyContent: 'space-between',  // Espaça os botões igualmente
+    marginTop: 10,  // Espaço superior para separação
+  },
   button: {
     width: '80%',
     backgroundColor: '#007BFF',
@@ -677,7 +732,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   buttonModal: {
-    width: '50%',
+    width: '40%',
     backgroundColor: '#007BFF',
     padding: 15,
     borderRadius: 10,

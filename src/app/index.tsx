@@ -65,18 +65,36 @@ export default function Home() {
   };
 
   // Função para Enviar os dados para a API que faz a pesistência no banco de dados
-  const handleEnviarDados = async () => {
-    try {
-      // Agora, você pode chamar as funções postLargadas e postChegadas diretamente
-      await postLargadas();  // Envia as largadas
-      await postChegadas();  // Envia as chegadas
-
-      Alert.alert('Sucesso', 'Dados enviados para as APIs!');
-    } catch (error) {
-      console.error('Erro ao enviar dados:', error);
-      Alert.alert('Erro', 'Ocorreu um erro ao enviar os dados.');
-    }
-  };
+  const handleEnviarDados = () => {
+    // Exibe o alerta de confirmação antes de enviar os dados
+    Alert.alert(
+      'Confirmação', // Título do alerta
+      'Deseja realmente enviar os dados?', // Mensagem do alerta
+      [
+        {
+          text: 'Não',
+          style: 'cancel', // Define o botão como estilo "cancel"
+          onPress: () => console.log('Envio cancelado.'), // Log para indicar cancelamento
+        },
+        {
+          text: 'Sim',
+          onPress: async () => {
+            try {
+              // Chama as funções de envio se o usuário confirmar
+              await postLargadas(); // Envia as largadas
+              await postChegadas(); // Envia as chegadas
+  
+              Alert.alert('Sucesso', 'Dados enviados para as APIs!');
+            } catch (error) {
+              console.error('Erro ao enviar dados:', error);
+              Alert.alert('Erro', 'Ocorreu um erro ao enviar os dados.');
+            }
+          },
+        },
+      ],
+      { cancelable: false } // O alerta só pode ser fechado pelos botões
+    );
+  };  
 
   return (
     <View style={styles.container}>
@@ -166,7 +184,7 @@ export default function Home() {
 
       {/* Rodapé com a versão */}
       <View style={styles.footer}>
-        <Text style={styles.footerText}>V. 1.0.0 - TESTE</Text>
+        <Text style={styles.footerText}>V. 1.1.1 - TESTE</Text>
       </View>
       
       <TouchableOpacity

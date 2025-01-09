@@ -29,3 +29,5 @@ export const useUserContext = () => {
   }
   return context;
 };
+
+export default UserProvider;

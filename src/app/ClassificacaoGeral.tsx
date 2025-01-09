@@ -8,7 +8,6 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from 'expo-file-system'; // Para salvar arquivos localmente
 import * as Sharing from 'expo-sharing'; // Para compartilhar arquivos
 
-
 export default function ClassificacaoGeral() {
   const router = useRouter();
   const [sexo, setSexo] = useState('Todos');
@@ -17,7 +16,6 @@ export default function ClassificacaoGeral() {
   const [urlBase, setUrlBase] = useState<string>(''); // Estado para armazenar a URL base
   const [segmentacao, setSegmentacao] = useState({ sexo: [], range_idade: [] });
   const [modalVisible, setModalVisible] = useState(false);
-  const [isSharing, setIsSharing] = useState(false); // Controle para compartilhamento
 
   // Carregar a URL base salva
   useEffect(() => {
@@ -193,12 +191,14 @@ export default function ClassificacaoGeral() {
                 )}
               />
             </ScrollView>
-            <TouchableOpacity style={styles.button} onPress={() => setModalVisible(false)}>
-              <Text style={styles.buttonText}>Fechar</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.button} onPress={generateCSV}>
-              <Text style={styles.buttonText}>Gerar CSV</Text>
-            </TouchableOpacity>
+            <View style={styles.buttonContainer}>
+              <TouchableOpacity style={styles.buttonModal} onPress={() => setModalVisible(false)}>
+                <Text style={styles.buttonText}>Fechar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.buttonModal} onPress={generateCSV}>
+                <Text style={styles.buttonText}>Gerar CSV</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </Modal>
@@ -256,9 +256,28 @@ const styles = StyleSheet.create({
     fontSize: 16, // Tamanho da fonte do rótulo
     marginBottom: 5, // Espaçamento abaixo do rótulo
   },
+  buttonContainer: {
+    flexDirection: 'row',  // Alinha os botões na horizontal
+    justifyContent: 'space-between',  // Espaça os botões igualmente
+    marginTop: 10,  // Espaço superior para separação
+  },
   // Estilo geral para os botões
   button: {
     width: '50%',
+    backgroundColor: '#007BFF',
+    padding: 15,
+    borderRadius: 10,
+    alignItems: 'center',
+    marginTop: 20,
+    marginBottom: 20,
+    alignSelf: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowRadius: 5,
+    elevation: 4, // Para Android
+  },
+  buttonModal: {
+    width: '40%',
     backgroundColor: '#007BFF',
     padding: 15,
     borderRadius: 10,
