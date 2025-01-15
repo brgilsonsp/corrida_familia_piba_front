@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { View, Text, Alert, TouchableOpacity, TextInput, Modal, StyleSheet } from 'react-native';
+import { View, Text, Alert, TouchableOpacity, TextInput, Modal, StyleSheet, Dimensions } from 'react-native';
 import { useRouter } from 'expo-router';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import { getCorredorByNumber, insertCorredor,updateCorredor } from './initializeDatabase';
@@ -15,11 +15,11 @@ export default function Cronometro() {
   const [currentTime, setCurrentTime] = useState<number>(0);
   const [modalVisible, setModalVisible] = useState(false);
   const [delayedRunnerNumbers, setDelayedRunnerNumbers] = useState(['', '', '', '']);
+  const [responseColors, setResponseColors] = useState([]);
 
   const animationFrameId = useRef<number | null>(null);  // Ref para armazenar o ID do requestAnimationFrame
   const lastTimeRef = useRef(0);  // Ref para armazenar o tempo do último quadro
   const startTimeRef = useRef(0);  // Ref para armazenar o tempo inicial do cronômetro
-
 
   // Formatar o tempo em "hh:mm:ss:ms"
   const formatTimeToDisplay = useCallback((time: number) => {
@@ -101,81 +101,103 @@ export default function Cronometro() {
 
   const saveData = async (index) => {
     const runnerNumber = runnerNumbers[index];
-
-    // Verifica se o número do corredor foi preenchido
+  
     if (!runnerNumber.trim()) {
       setResponseMessages((prevMessages) => {
         const newMessages = [...prevMessages];
         newMessages[index] = 'Digite o número do corredor antes de salvar.';
         return newMessages;
       });
-    return;
+      setResponseColors((prevColors) => {
+        const newColors = [...prevColors];
+        newColors[index] = 'red';
+        return newColors;
+      });
+      return;
     }
-
-    // Valida se o número do corredor é válido
+  
     if (isNaN(runnerNumber) || parseInt(runnerNumber) <= 0) {
-        setResponseMessages((prevMessages) => {
-            const newMessages = [...prevMessages];
-            newMessages[index] = 'Número do corredor deve ser um número válido.';
-            return newMessages;
-        });
-        return;
+      setResponseMessages((prevMessages) => {
+        const newMessages = [...prevMessages];
+        newMessages[index] = 'Digite um número válido.';
+        return newMessages;
+      });
+      setResponseColors((prevColors) => {
+        const newColors = [...prevColors];
+        newColors[index] = 'red';
+        return newColors;
+      });
+      return;
     }
-
+  
     const { exists, corredor } = await checkRunnerStatus(parseInt(runnerNumber));
-
+  
     if (exists && corredor) {
-        if (!corredor.tempo_final) {
-            try {
-                await updateCorredor({
-                    numero_corredor: parseInt(runnerNumber),
-                    monitor: userName,
-                    tempo_final: formatTimeToDisplay(currentTime),
-                });
-
-                setResponseMessages((prevMessages) => {
-                    const newMessages = [...prevMessages];
-                    newMessages[index] = 'Tempo final atualizado com sucesso!';
-                    return newMessages;
-                });
-            } catch (error) {
-                console.error('Erro ao atualizar tempo final:', error);
-                Alert.alert('Erro ao atualizar tempo final.');
-            }
-        } else {
-            setResponseMessages((prevMessages) => {
-                const newMessages = [...prevMessages];
-                newMessages[index] = `O tempo final já foi registrado: ${corredor.tempo_final}`;
-                return newMessages;
-            });
-        }
-    } else {
+      if (!corredor.tempo_final) {
         try {
-            await insertCorredor({
-                numero_corredor: parseInt(runnerNumber),
-                monitor: userName,
-                tempo_final: formatTimeToDisplay(currentTime),
-                tempo_de_atraso: 'N/A',
-            });
-
-            setResponseMessages((prevMessages) => {
-                const newMessages = [...prevMessages];
-                newMessages[index] = 'Tempo final registrado com sucesso!';
-                return newMessages;
-            });
+          await updateCorredor({
+            numero_corredor: parseInt(runnerNumber),
+            monitor: userName,
+            tempo_final: formatTimeToDisplay(currentTime),
+          });
+  
+          setResponseMessages((prevMessages) => {
+            const newMessages = [...prevMessages];
+            newMessages[index] = 'Tempo final atualizado com sucesso!';
+            return newMessages;
+          });
+          setResponseColors((prevColors) => {
+            const newColors = [...prevColors];
+            newColors[index] = 'blue';
+            return newColors;
+          });
         } catch (error) {
-            console.error('Erro ao registrar tempo final:', error);
-            Alert.alert('Erro ao registrar tempo final.');
+          console.error('Erro ao atualizar tempo final:', error);
+          Alert.alert('Erro ao atualizar tempo final.');
         }
+      } else {
+        setResponseMessages((prevMessages) => {
+          const newMessages = [...prevMessages];
+          newMessages[index] = `O tempo final já foi registrado: ${corredor.tempo_final}`;
+          return newMessages;
+        });
+        setResponseColors((prevColors) => {
+          const newColors = [...prevColors];
+          newColors[index] = 'red';
+          return newColors;
+        });
+      }
+    } else {
+      try {
+        await insertCorredor({
+          numero_corredor: parseInt(runnerNumber),
+          monitor: userName,
+          tempo_final: formatTimeToDisplay(currentTime),
+          tempo_de_atraso: 'N/A',
+        });
+  
+        setResponseMessages((prevMessages) => {
+          const newMessages = [...prevMessages];
+          newMessages[index] = 'Tempo final registrado com sucesso!';
+          return newMessages;
+        });
+        setResponseColors((prevColors) => {
+          const newColors = [...prevColors];
+          newColors[index] = 'blue';
+          return newColors;
+        });
+      } catch (error) {
+        console.error('Erro ao registrar tempo final:', error);
+        Alert.alert('Erro ao registrar tempo final.');
+      }
     }
-
-    // Limpa o input do corredor correspondente após qualquer caso
+  
     setRunnerNumbers((prevNumbers) => {
-        const newNumbers = [...prevNumbers];
-        newNumbers[index] = ''; // Apenas o input específico é limpo
-        return newNumbers;
+      const newNumbers = [...prevNumbers];
+      newNumbers[index] = '';
+      return newNumbers;
     });
-  };
+  };  
 
   const saveDelayedRunners = async (index) => {
     const runnerNumber = delayedRunnerNumbers[index];
@@ -187,15 +209,25 @@ export default function Cronometro() {
         newMessages[index] = 'Digite o número do corredor antes de salvar.';
         return newMessages;
       });
-    return;
+      setResponseColors((prevColors) => {
+        const newColors = [...prevColors];
+        newColors[index] = 'red'; // Cor vermelha para erro
+        return newColors;
+      });
+      return;
     }
 
     // Verifica se o número do corredor é válido
     if (isNaN(runnerNumber) || parseInt(runnerNumber) <= 0) {
         setResponseMessages((prevMessages) => {
             const newMessages = [...prevMessages];
-            newMessages[index] = 'Número do corredor deve ser um número válido.';
+            newMessages[index] = 'Digite um número válido.';
             return newMessages;
+        });
+        setResponseColors((prevColors) => {
+            const newColors = [...prevColors];
+            newColors[index] = 'red'; // Cor vermelha para erro
+            return newColors;
         });
         return;
     }
@@ -209,11 +241,21 @@ export default function Cronometro() {
                 newMessages[index] = `O tempo final já foi registrado: ${corredor.tempo_final}`;
                 return newMessages;
             });
+            setResponseColors((prevColors) => {
+                const newColors = [...prevColors];
+                newColors[index] = 'red'; // Cor vermelha para erro
+                return newColors;
+            });
         } else if (corredor.tempo_de_atraso) {
             setResponseMessages((prevMessages) => {
                 const newMessages = [...prevMessages];
                 newMessages[index] = `O tempo atrasado já foi registrado: ${corredor.tempo_de_atraso}`;
                 return newMessages;
+            });
+            setResponseColors((prevColors) => {
+                const newColors = [...prevColors];
+                newColors[index] = 'red'; // Cor vermelha para erro
+                return newColors;
             });
         }
     } else {
@@ -230,9 +272,24 @@ export default function Cronometro() {
                 newMessages[index] = 'Tempo de atraso atualizado com sucesso!';
                 return newMessages;
             });
+            setResponseColors((prevColors) => {
+                const newColors = [...prevColors];
+                newColors[index] = 'blue'; // Cor azul para sucesso
+                return newColors;
+            });
         } catch (error) {
             console.error('Erro ao atualizar tempo de atraso:', error);
             Alert.alert('Erro ao atualizar tempo de atraso.');
+            setResponseMessages((prevMessages) => {
+                const newMessages = [...prevMessages];
+                newMessages[index] = 'Erro ao atualizar tempo de atraso.';
+                return newMessages;
+            });
+            setResponseColors((prevColors) => {
+                const newColors = [...prevColors];
+                newColors[index] = 'red'; // Cor vermelha para erro
+                return newColors;
+            });
         }
     }
 
@@ -242,7 +299,7 @@ export default function Cronometro() {
         newNumbers[index] = '';
         return newNumbers;
     });
-  };
+};
 
   const openDelayedRunners = async () =>{
     setRunnerNumbers(['', '', '', '']); // Limpa os números dos corredores
@@ -273,7 +330,6 @@ export default function Cronometro() {
       {/* Label para adicionar corredores */}
 
       <Text style={stylescronometro.label}>Adicionar corredores:</Text>
-
       {runnerNumbers.map((number, index) => (
         <View key={index} style={stylescronometro.inputRow}>
           <View style={stylescronometro.rowContainer}>
@@ -282,9 +338,13 @@ export default function Cronometro() {
               placeholder="Número do Corredor"
               value={number}
               onChangeText={(text) => {
+                // Bloqueia o ponto (.) e a vírgula (,)
+                const sanitizedText = text.replace(/[,.\-\s]/g, ''); // Remove qualquer ponto ou vírgula
+                
                 const newNumbers = [...runnerNumbers];
-                newNumbers[index] = text;
+                newNumbers[index] = sanitizedText;
                 setRunnerNumbers(newNumbers);
+                
                 setResponseMessages((prevMessages) => {
                   const newMessages = [...prevMessages];
                   newMessages[index] = '';  // Limpar a mensagem de resposta
@@ -297,7 +357,16 @@ export default function Cronometro() {
               <Text style={stylescronometro.saveButtonText}>Salvar</Text>
             </TouchableOpacity>
           </View>
-          {responseMessages[index] && <Text>{responseMessages[index]}</Text>}
+          {responseMessages[index] && (
+            <Text
+              style={[
+                stylescronometro.mensagem,
+                { color: responseColors[index] || 'black' }, // Cor definida no estado ou cor padrão
+              ]}
+            >
+              {responseMessages[index]}
+            </Text>
+          )}
         </View>
       ))}
 
@@ -311,27 +380,39 @@ export default function Cronometro() {
         <View style={stylescronometro.modalContainer4}>
           <View style={stylescronometro.modalContent4}>
             <Text style={stylescronometro.modalTitle4}>Corredores Atrasados</Text>
-            {delayedRunnerNumbers.map((number, index) => (
-              <View key={index} style={stylescronometro.inputRow}>
-                <View style={stylescronometro.rowContainer}>
-                  <TextInput
-                    style={stylescronometro.input}
-                    placeholder="Número do Corredor"
-                    value={number}
-                    onChangeText={(text) => {
-                      const newNumbers = [...delayedRunnerNumbers];
-                      newNumbers[index] = text;
-                      setDelayedRunnerNumbers(newNumbers);
-                    }}
-                    keyboardType="numeric"
-                  />
-                  <TouchableOpacity style={stylescronometro.saveButton} onPress={() => saveDelayedRunners(index)}>
-                    <Text style={stylescronometro.saveButtonText}>Salvar</Text>
-                  </TouchableOpacity>
+              {delayedRunnerNumbers.map((number, index) => (
+                <View key={index} style={stylescronometro.inputRow}>
+                  <View style={stylescronometro.rowContainer}>
+                    <TextInput
+                      style={stylescronometro.input}
+                      placeholder="Número do Corredor"
+                      value={number}
+                      onChangeText={(text) => {
+                        // Remove pontos e vírgulas
+                        const sanitizedText = text.replace(/[,.\-\s]/g, ''); // Remove qualquer ponto ou vírgula
+                        
+                        const newNumbers = [...delayedRunnerNumbers];
+                        newNumbers[index] = sanitizedText;
+                        setDelayedRunnerNumbers(newNumbers);
+                      }}
+                      keyboardType="numeric"  // Usando teclado numérico, que não inclui ponto ou vírgula
+                    />
+                    <TouchableOpacity style={stylescronometro.saveButton} onPress={() => saveDelayedRunners(index)}>
+                      <Text style={stylescronometro.saveButtonText}>Salvar</Text>
+                    </TouchableOpacity>
+                  </View>
+                  {responseMessages[index] && (
+                    <Text
+                      style={[
+                        stylescronometro.mensagem,
+                        { color: responseColors[index] || 'black' }, // A cor é definida pela variável de estado ou cor padrão
+                      ]}
+                    >
+                      {responseMessages[index]}
+                    </Text>
+                  )}
                 </View>
-                <Text>{responseMessages[index]}</Text>
-              </View>
-            ))}
+              ))}
             <TouchableOpacity style={stylescronometro.button} onPress={() => exitDelayedRunners()}>
               <Text style={stylescronometro.buttonText}>Fechar</Text>
             </TouchableOpacity>
@@ -345,24 +426,26 @@ export default function Cronometro() {
   );
 }
 
+const { width, height } = Dimensions.get('window');
+
 const stylescronometro = StyleSheet.create({
   
   // Contêiner principal
   container: {
     flex: 1,
-    padding: '5%',
+    padding: width * 0.05,
     backgroundColor: '#F0F8FF', // Fundo suave azul claro
   },
   
   // Estilo para o botão de voltar
   backButton: {
-    marginBottom: '2%', // Espaçamento abaixo do botão
-    top: 3, // Espaçamento acima do botão
-    left: 1, // Espaçamento à esquerda do botão
+    marginBottom: width * 0.03, // Espaçamento abaixo do botão
+    top: width * 0.01, // Espaçamento acima do botão
+    left: height * 0.002, // Espaçamento à esquerda do botão
   },
 
   title: {
-    fontSize: 30,
+    fontSize: 35,
     fontWeight: 'bold',
     textAlign: 'center',
     marginBottom: 1,
@@ -373,7 +456,7 @@ const stylescronometro = StyleSheet.create({
     fontSize: 45,
     fontWeight: 'bold',
     color: '#007BFF', 
-    marginBottom: '1%',
+    marginBottom: width * 0.01,
     textAlign: 'center',
   },
 
@@ -400,52 +483,57 @@ const stylescronometro = StyleSheet.create({
   },
   
   buttonContainer: {
-    width: '48%', // Cada botão ocupa 48% da largura do contêiner
-    marginHorizontal: 5, // Ajusta a distância entre os botões (ajuste conforme necessário)
-    marginBottom: 10, // Espaçamento entre os botões e o resto da tela
+    width: width * 0.4, // Cada botão ocupa 48% da largura do contêiner
+    marginHorizontal: height * 0.1, // Ajusta a distância entre os botões (ajuste conforme necessário)
+    marginBottom: width * 0.1, // Espaçamento entre os botões e o resto da tela
   },  
   // Estilo para o texto do botão
   buttonText: {
   color: '#FFFFFF', // Cor do texto (branco)
-  fontSize: 16, // Tamanho da fonte do texto
+  fontSize: 20, // Tamanho da fonte do texto
   },
   saveButtonText: {
     color: '#FFFFFF', // Cor do texto (branco)
-    fontSize: 15, // Tamanho da fonte do texto
+    fontSize: 20, // Tamanho da fonte do texto
   },
   // Estilo para os rótulos
   label: {
-    fontSize: 16, // Tamanho da fonte do rótulo
-    marginBottom: 5, // Espaçamento abaixo do rótulo
+    fontSize: 20, // Tamanho da fonte do rótulo
+    marginBottom: width * 0.01, // Espaçamento abaixo do rótulo
+  },
+  mensagem:{
+    fontSize: 17, // Tamanho da fonte do rótulo
+    color: 'red',
   },
 
   inputRow: {
-    marginBottom: 5, // Espaçamento abaixo da linha de entrada
-    width: '75%', // Largura de 75% do contêiner pai
+    marginBottom: width * 0.02, // Espaçamento abaixo da linha de entrada
+    width: width * 0.9, // Largura de 75% do contêiner pai
     alignSelf: 'center',
   },
   // Estilo para os campos de entrada
   input: {
-    width: '100%', // Largura de 75% do contêiner pai
-    height: 50, // Altura fixa de 50 pixels
+    width: width * 0.65, // Largura de 75% do contêiner pai
+    height: height * 0.066, // Altura fixa de 50 pixels
+    fontSize:20,
     borderColor: '#ccc', // Cor da borda do campo de entrada
     backgroundColor: '#fff', // Cor de fundo branca
     borderWidth: 1, // Largura da borda de 1 pixel
     borderRadius: 5, // Bordas arredondadas
     paddingHorizontal: 10, // Espaçamento interno horizontal de 10 pixels
-    marginBottom: 5, // Margem abaixo do input para espaçamento
+    marginBottom: width * 0.012, // Margem abaixo do input para espaçamento
   },
   // Estilo para o botão de salvar
   saveButton: {
-    width: '30%', // Largura de 20% do contêiner pai
-    height: 50,
-    padding: 15, // Espaçamento interno de 15 pixels
+    width: width * 0.25, // Largura de 20% do contêiner pai
+    height: height * 0.068,
+    padding: width * 0.031, // Espaçamento interno de 15 pixels
     borderRadius: 10, // Bordas arredondadas
     backgroundColor: '#007BFF', // Cor de fundo azul
     alignItems: 'center', // Centraliza o conteúdo do botão
-    marginLeft: 10, // Espaçamento à esquerda do botão
+    marginLeft: width * 0.02, // Espaçamento à esquerda do botão
     alignSelf: 'center',
-    marginBottom: 5,
+    marginBottom: width * 0.012,
     shadowColor: '#000',
     shadowOpacity: 0.2,
     elevation: 4, // Para Android
@@ -474,7 +562,7 @@ const stylescronometro = StyleSheet.create({
     marginHorizontal: 20, // Garantindo que haja algum espaço nas bordas laterais
   },  
   modalTitle4: {
-    fontSize: 20,
+    fontSize: 25,
     fontWeight: 'bold',
     marginBottom: 10, // Aumentando o espaçamento inferior
     textAlign: 'center',
@@ -482,6 +570,7 @@ const stylescronometro = StyleSheet.create({
   comment: {
     marginTop: 5,
     textAlign: 'center',
+    fontSize:16,
     color: '#555',
   },
 });

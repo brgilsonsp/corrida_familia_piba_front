@@ -30,20 +30,6 @@ export default function ConfiguracaoScreen () {
   const [databaseTable, setDatabaseTable] = useState<Cronometro[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   
-  useEffect(() => {
-    const fetchUserName = async () => {
-      try {
-        const storedUserName = await AsyncStorage.getItem('userName');
-        if (storedUserName) {
-          setUserName(storedUserName);
-        }
-      } catch (error) {
-        console.error('Erro ao carregar userName do AsyncStorage', error);
-      }
-    };
-
-    fetchUserName();
-  }, []);
 
   // Carregar URL base salvo do AsyncStorage
   useEffect(() => {
@@ -71,8 +57,8 @@ export default function ConfiguracaoScreen () {
 
   const handleSaveCurrentTime = () => {
     Alert.alert(
-      'Confirmação',
-      'Deseja salvar o horário atual?',
+      'Confirmação2',
+      'Deseja salvar o horário atual? Isso apagará a base remota.',
       [
         {
           text: 'Não',
@@ -171,7 +157,7 @@ export default function ConfiguracaoScreen () {
   
   const handleSaveInputTime = () => {
     Alert.alert(
-      'Confirmação',
+      'Confirmação1',
       'Deseja salvar o horário inserido?',
       [
         {
@@ -472,7 +458,7 @@ export default function ConfiguracaoScreen () {
               {serverTime ? formatTimeToDisplay(currentTime) : '00:00:00.00'}
             </Text>
             <TouchableOpacity style={styles.button} onPress={handleSaveCurrentTime}>
-              <Text style={styles.buttonText}>Salvar Cronômetro</Text>
+              <Text style={styles.buttonText}>Iniciar corrida</Text>
             </TouchableOpacity>
             <Text style={styles.label}>Horário salvo: {formatTimeToDisplay(savedTime)}</Text>
             <TouchableOpacity style={styles.button} onPress={handleEndRace}>
@@ -491,7 +477,7 @@ export default function ConfiguracaoScreen () {
               onChangeText={setInputHoraEspecifica}
             />
             <TouchableOpacity style={styles.button} onPress={handleSaveInputTime}>
-              <Text style={styles.buttonText}>Salvar Horário</Text>
+              <Text style={styles.buttonText}>Iniciar corrida</Text>
             </TouchableOpacity>
             <Text style={styles.label}>Horário salvo: {formatTimeToDisplay(savedTime)}</Text>
           </View>
@@ -623,28 +609,28 @@ export default function ConfiguracaoScreen () {
           style={[styles.tab, activeTab === 'editarUrl' && styles.activeTab]}
           onPress={() => setActiveTab('editarUrl')}
         >
-          <Icon name="edit" size={20} color={activeTab === 'editarUrl' ? '#fff' : '#34495E'} />
+          <Icon name="edit" size={25} color={activeTab === 'editarUrl' ? '#fff' : '#34495E'} />
           <Text style={[styles.tabText, activeTab === 'editarUrl' && styles.activeTabText]}>Editar URL</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.tab, activeTab === 'cronometro' && styles.activeTab]}
           onPress={() => setActiveTab('cronometro')}
         >
-          <Icon2 name="timer" size={20} color={activeTab === 'cronometro' ? '#fff' : '#34495E'} />
+          <Icon2 name="timer" size={25} color={activeTab === 'cronometro' ? '#fff' : '#34495E'} />
           <Text style={[styles.tabText, activeTab === 'cronometro' && styles.activeTabText]}>Cronômetro</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.tab, activeTab === 'horaEspecifica' && styles.activeTab]}
           onPress={() => setActiveTab('horaEspecifica')}
         >
-          <Icon name="clock-o" size={20} color={activeTab === 'horaEspecifica' ? '#fff' : '#34495E'} />
+          <Icon name="clock-o" size={25} color={activeTab === 'horaEspecifica' ? '#fff' : '#34495E'} />
           <Text style={[styles.tabText, activeTab === 'horaEspecifica' && styles.activeTabText]}>Hora Específica</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.tab, activeTab === 'bancoDeDados' && styles.activeTab]}
           onPress={() => setActiveTab('bancoDeDados')}
         >
-          <Icon name="database" size={20} color={activeTab === 'bancoDeDados' ? '#fff' : '#34495E'} />
+          <Icon name="database" size={25} color={activeTab === 'bancoDeDados' ? '#fff' : '#34495E'} />
           <Text style={[styles.tabText, activeTab === 'bancoDeDados' && styles.activeTabText]}>Banco de Dados</Text>
         </TouchableOpacity>
       </View>
@@ -694,7 +680,7 @@ const styles = StyleSheet.create({
     color: '#fff', // Texto branco quando a aba está ativa
   },
   tabText: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '600',
     color: '#34495E',
     textAlign: 'center', // Centraliza o texto
@@ -703,7 +689,7 @@ const styles = StyleSheet.create({
     marginTop: 60,
   },
   label: {
-    fontSize: 18,
+    fontSize: 25,
     fontWeight: '600',
     color: '#34495E',
     marginBottom: 10,
@@ -729,7 +715,7 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     color: 'white',
-    fontSize: 16,
+    fontSize: 20,
   },
   buttonModal: {
     width: '40%',
@@ -747,10 +733,10 @@ const styles = StyleSheet.create({
   },
   buttonTextModal: {
     color: 'white',
-    fontSize: 16,
+    fontSize: 20,
   },
   input: {
-    width: '100%',
+    width: width * 0.9,
     height: 50,
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
@@ -758,14 +744,14 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     paddingHorizontal: 15,
     marginBottom: 15,
-    fontSize: 16,
+    fontSize: 20,
     color: '#34495E',
   },
   timer: {
     fontSize: 48,
     fontWeight: 'bold',
     color: '#007BFF',
-    marginBottom: 20,
+    marginBottom: 5,
     textAlign: 'center',
   },
   modalOverlay2: {
@@ -802,7 +788,8 @@ const styles = StyleSheet.create({
   // Estilo para cada célula na linha de dados
   tableCell: {
     textAlign: 'center', // Centraliza o texto dentro da célula
-    padding: 10, // Adiciona espaçamento interno na célula para afastar o texto das bordas
+    fontSize:17,
+    paddingVertical:10, // Adiciona espaçamento interno na célula para afastar o texto das bordas
     borderRightWidth: 1, // Define a largura da borda direita para separar visualmente as células
     borderLeftWidth: 1,
     borderRightColor: '#ccc', // Cor da borda direita
@@ -812,8 +799,10 @@ const styles = StyleSheet.create({
   // Estilo para cada célula do cabeçalho
   tableHeaderCell: {
     fontWeight: 'bold', // Torna o texto do cabeçalho em negrito para diferenciá-lo das células
+    fontSize:17,
     textAlign: 'center', // Centraliza o texto dentro da célula do cabeçalho
-    padding: 10, // Adiciona espaçamento interno para as células do cabeçalho
+    paddingVertical: 10, // Adiciona espaçamento interno para as células do cabeçalho
+    paddingHorizontal: 3,
     color: '#007BFF', // Define a cor do texto no cabeçalho para destacar
     borderRightWidth: 1, // Define a largura da borda direita para separar visualmente as células
     borderLeftWidth: 1,

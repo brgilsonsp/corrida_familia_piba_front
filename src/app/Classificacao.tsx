@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, FlatList, ScrollView, Modal, TextInput, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, FlatList, ScrollView, Modal, TextInput, StyleSheet, Dimensions } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import { useRouter } from 'expo-router';
 import * as FileSystem from 'expo-file-system'; // Para salvar arquivos localmente
@@ -72,9 +72,13 @@ export default function Classificacao() {
       <TextInput
         style={styles.input}
         value={numeroCorredor}
-        onChangeText={(text) => setNumeroCorredor(text)}
+        onChangeText={(text) => {
+          // Remover as vírgulas e pontos
+          const sanitizedText = text.replace(/[,.\-\s]/g, '');
+          setNumeroCorredor(sanitizedText);
+        }}
         placeholder="Digite o número do corredor"
-        keyboardType="numeric"
+        keyboardType="numeric"  // Usando teclado numérico
       />
 
       <TouchableOpacity style={styles.button} onPress={buscarCorredorPorNumero}>
@@ -132,15 +136,20 @@ export default function Classificacao() {
           </View>
         </View>
       </Modal>
+      <Text style={styles.comment}>
+          Classificação que busca as informações da base de dados do seu celular.
+      </Text>
     </View>
   );
 }
+
+const { width, height } = Dimensions.get('window');
 
 // Definindo os estilos usando StyleSheet.create()
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 20,
+    padding: width * 0.05,
     backgroundColor: '#F0F8FF', // Gradiente suave
   },
   // Estilo para o botão de voltar
@@ -153,14 +162,15 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 50,
     borderColor: '#ccc',
+    fontSize:20,
     borderWidth: 1,
     borderRadius: 10,
     paddingHorizontal: 10,
     backgroundColor: '#f7f7f7',
-    marginBottom: 3,
+    marginBottom: 20,
   },
   title: {
-    fontSize: 35,
+    fontSize: 40,
     fontWeight: 'bold',
     textAlign: 'center',
     marginBottom: 20,
@@ -183,7 +193,7 @@ const styles = StyleSheet.create({
   },
   // Estilo para os rótulos
   label: {
-    fontSize: 16, // Tamanho da fonte do rótulo
+    fontSize: 20, // Tamanho da fonte do rótulo
     marginBottom: 5, // Espaçamento abaixo do rótulo
   },
   buttonContainer: {
@@ -193,7 +203,7 @@ const styles = StyleSheet.create({
   },
   // Estilo geral para os botões
   button: {
-    width: '80%',
+    width: '85%',
     backgroundColor: '#007BFF',
     padding: 15,
     borderRadius: 10,
@@ -207,7 +217,7 @@ const styles = StyleSheet.create({
     elevation: 4, // Para Android
   },
   buttonModal: {
-    width: '40%',
+    width: '45%',
     backgroundColor: '#007BFF',
     padding: 15,
     borderRadius: 10,
@@ -222,7 +232,7 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     color: 'white',
-    fontSize: 16,
+    fontSize: 20,
   },
   modalOverlay2: {
     flex: 1,
@@ -258,7 +268,8 @@ const styles = StyleSheet.create({
   // Estilo para cada célula na linha de dados
   tableCell: {
     textAlign: 'center', // Centraliza o texto dentro da célula
-    padding: 10, // Adiciona espaçamento interno na célula para afastar o texto das bordas
+    fontSize:17,
+    paddingVertical: 10, // Adiciona espaçamento interno na célula para afastar o texto das bordas
     borderRightWidth: 1, // Define a largura da borda direita para separar visualmente as células
     borderLeftWidth: 1,
     borderRightColor: '#ccc', // Cor da borda direita
@@ -269,7 +280,9 @@ const styles = StyleSheet.create({
   tableHeaderCell: {
     fontWeight: 'bold', // Torna o texto do cabeçalho em negrito para diferenciá-lo das células
     textAlign: 'center', // Centraliza o texto dentro da célula do cabeçalho
-    padding: 10, // Adiciona espaçamento interno para as células do cabeçalho
+    fontSize:17,
+    paddingVertical: 10, // Adiciona espaçamento interno para as células do cabeçalho
+    paddingHorizontal: 3,
     color: '#007BFF', // Define a cor do texto no cabeçalho para destacar
     borderRightWidth: 1, // Define a largura da borda direita para separar visualmente as células
     borderLeftWidth: 1,
@@ -278,13 +291,20 @@ const styles = StyleSheet.create({
   },
 
   // Estilo para a coluna "Posição" com largura fixa
-  colPosition: { width: 75 }, // Define largura fixa de 60 para a coluna "Posição"
+  colPosition: { width: width * 0.19 }, // Define largura fixa de 60 para a coluna "Posição"
 
   // Estilo para a coluna "Número" com largura fixa
-  colNumber: { width: 75 }, // Define largura fixa de 80 para a coluna "Número"
+  colNumber: { width: width * 0.19 }, // Define largura fixa de 80 para a coluna "Número"
 
-  colDelay: {width: 100 },  
+  colDelay: { width: width * 0.25 },  
 
   // Estilo para a coluna "Tempo" com largura fixa
-  colTime: { width: 100 }, // Define largura fixa de 100 para a coluna "Tempo"
+  colTime: {  width: width * 0.25 }, // Define largura fixa de 100 para a coluna "Tempo"
+
+  comment: {
+    marginTop: 5,
+    textAlign: 'center',
+    fontSize:16,
+    color: '#555',
+  },
 });

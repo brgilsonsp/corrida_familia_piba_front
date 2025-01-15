@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, FlatList, ScrollView, Modal, TextInput, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, FlatList, ScrollView, Modal, StyleSheet, Dimensions } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import { useRouter } from 'expo-router';
@@ -127,22 +127,34 @@ export default function ClassificacaoGeral() {
 
       <Text style={styles.title}>Classificação geral</Text>
 
-      <Text style={styles.label}>Selecione o Sexo:</Text>
-      <View style={styles.pickerContainer}>
-        <Picker selectedValue={sexo} style={styles.picker} onValueChange={(itemValue) => setSexo(itemValue)}>
-          <Picker.Item label="Todos" value="Todos" />
-          {segmentacao.sexo.map((sex, index) => (
-            <Picker.Item key={index} label={sex} value={sex} />
-          ))}
-        </Picker>
+      {/* Campo Gênero */}
+      <View>
+        <Text style={styles.label}>Selecione o Sexo:</Text>
+        <View style={styles.pickerContainer}>
+          <Picker
+            selectedValue={sexo}
+            onValueChange={(itemValue) => setSexo(itemValue)}
+            style={styles.picker}
+          >
+            <Picker.Item label="Todos" value="Todos" style={styles.pickerItem} />
+            {segmentacao.sexo.map((sex, index) => (
+              <Picker.Item key={index} label={sex} value={sex} style={styles.pickerItem} />
+            ))}
+          </Picker>
+        </View>
       </View>
 
+      {/* Campo Faixa Etária */}
       <Text style={styles.label}>Faixa Etária:</Text>
       <View style={styles.pickerContainer}>
-        <Picker selectedValue={faixaEtaria} style={styles.picker} onValueChange={(itemValue) => setFaixaEtaria(itemValue)}>
-          <Picker.Item label="Todas" value="Todas" />
+        <Picker
+          selectedValue={faixaEtaria}
+          style={styles.picker}
+          onValueChange={(itemValue) => setFaixaEtaria(itemValue)}
+        >
+          <Picker.Item label="Todas" value="Todas" style={styles.pickerItem} />
           {segmentacao.range_idade.map((ageRange, index) => (
-            <Picker.Item key={index} label={ageRange} value={ageRange} />
+            <Picker.Item key={index} label={ageRange} value={ageRange} style={styles.pickerItem} />
           ))}
         </Picker>
       </View>
@@ -202,15 +214,20 @@ export default function ClassificacaoGeral() {
           </View>
         </View>
       </Modal>
+      <Text style={styles.comment}>
+          Classificação que busca as informações da base de dados online.
+      </Text>
     </View>
   );
 }
+
+const { width, height } = Dimensions.get('window');
 
 // Definindo os estilos usando StyleSheet.create()
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 20,
+    padding: width * 0.05,
     backgroundColor: '#F0F8FF', // Gradiente suave
   },
   // Estilo para o botão de voltar
@@ -227,10 +244,10 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     paddingHorizontal: 10,
     backgroundColor: '#f7f7f7',
-    marginBottom: 3,
+    marginBottom: 5,
   },
   title: {
-    fontSize: 30,
+    fontSize: 35,
     fontWeight: 'bold',
     textAlign: 'center',
     marginBottom: 20,
@@ -243,17 +260,20 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 10,
     paddingHorizontal: 10,
-    backgroundColor: '#f7f7f7',
+    backgroundColor: '#ffffff',
     marginBottom: 5, // Espaçamento abaixo do contêiner
   },
   picker: {
     width: '100%',
-    height: 50, // Ajuste a altura para que combine com o layout
-    backgroundColor: '#f7f7f7', // Cor de fundo do Picker
+    height: height * 0.075, // 6% da altura da tela, igual ao TextInput
+  },
+  pickerItem: {
+    fontSize: 20,  // Aumenta o tamanho da fonte dos itens do Picker
   },
   // Estilo para os rótulos
   label: {
-    fontSize: 16, // Tamanho da fonte do rótulo
+    fontSize: 20, // Tamanho da fonte do rótulo
+    marginTop: 10,
     marginBottom: 5, // Espaçamento abaixo do rótulo
   },
   buttonContainer: {
@@ -277,7 +297,7 @@ const styles = StyleSheet.create({
     elevation: 4, // Para Android
   },
   buttonModal: {
-    width: '40%',
+    width: '45%',
     backgroundColor: '#007BFF',
     padding: 15,
     borderRadius: 10,
@@ -292,7 +312,7 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     color: 'white',
-    fontSize: 16,
+    fontSize: 20,
   },
   modalOverlay2: {
     flex: 1,
@@ -328,7 +348,8 @@ const styles = StyleSheet.create({
   // Estilo para cada célula na linha de dados
   tableCell: {
     textAlign: 'center', // Centraliza o texto dentro da célula
-    padding: 10, // Adiciona espaçamento interno na célula para afastar o texto das bordas
+    paddingVertical: 10, // Adiciona espaçamento interno na célula para afastar o texto das bordas
+    fontSize:17,
     borderRightWidth: 1, // Define a largura da borda direita para separar visualmente as células
     borderLeftWidth: 1,
     borderRightColor: '#ccc', // Cor da borda direita
@@ -338,8 +359,10 @@ const styles = StyleSheet.create({
   // Estilo para cada célula do cabeçalho
   tableHeaderCell: {
     fontWeight: 'bold', // Torna o texto do cabeçalho em negrito para diferenciá-lo das células
+    fontSize:17,
     textAlign: 'center', // Centraliza o texto dentro da célula do cabeçalho
-    padding: 10, // Adiciona espaçamento interno para as células do cabeçalho
+    paddingHorizontal:3,
+    paddingVertical: 10, // Adiciona espaçamento interno para as células do cabeçalho
     color: '#007BFF', // Define a cor do texto no cabeçalho para destacar
     borderRightWidth: 1, // Define a largura da borda direita para separar visualmente as células
     borderLeftWidth: 1,
@@ -366,4 +389,12 @@ const styles = StyleSheet.create({
 
   // Estilo para a coluna "Tempo" com largura fixa
   colTime: { width: 100 }, // Define largura fixa de 100 para a coluna "Tempo"
+
+  comment: {
+    marginTop: 5,
+    textAlign: 'center',
+    fontSize:16,
+    color: '#555',
+  },
+
 });

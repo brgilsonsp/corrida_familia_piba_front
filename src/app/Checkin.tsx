@@ -119,7 +119,7 @@ export default function Checkin() {
     setQuery(item.nome);
     setCpfOrRne(formatCpf(item.documento));  // Formata o CPF para exibição
     setNumber(item.numero_peito ? item.numero_peito.toString() : '');
-    setDob(new Date(item.data_nascimento.split('/').reverse().join('-')));
+    setDob(new Date(item.data_nascimento.split('/').reverse().join('-') + 'T00:00:00'));
     setGender(item.sexo);
     setModalidade(item.modalidade);
     setSelectedId(item.id_atleta);
@@ -133,27 +133,27 @@ export default function Checkin() {
 
   const formatDate = (date: Date) => {
     // Corrigir mês para ser no formato correto
-    const day = String(date.getUTCDate()).padStart(2, '0');
-    const month = String(date.getUTCMonth() + 1).padStart(2, '0'); // Corrigindo o mês
-    const year = date.getUTCFullYear(); // Usando o ano UTC
+    const day = String(date.getDate()).padStart(2, '0');  // Usando getDate para pegar o dia local
+    const month = String(date.getMonth() + 1).padStart(2, '0'); // Corrigindo o mês (mesmo padrão)
+    const year = date.getFullYear();  // Usando getFullYear para pegar o ano local
     return `${day}/${month}/${year}`;
-};
+  };
+  
+  const handleDateChange = (event: any, selectedDate?: Date) => {
+    setShowDatePicker(false);
+  
+    // Quando o usuário confirma a data
+    if (selectedDate) {
+      setDob(selectedDate);  // Usando diretamente a data local
+    }
+  };
 
-const handleDateChange = (event: any, date?: Date) => {
-  setShowDatePicker(false);
-  if (date) {
-      // Garantir que estamos tratando a data com o mesmo fuso horário
-      const correctedDate = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
-      setDob(correctedDate);  // Usar a data corrigida
-  }
-};
-
-const handlePostNewCorredor = async () => {
-  // Verificar se todos os campos estão preenchidos
-  if (!query || !cpfOrRne || !number || !gender || !modalidade || !dob) {
-    Alert.alert('Erro', 'Por favor, preencha todos os campos.');
-    return;
-  }
+  const handlePostNewCorredor = async () => {
+    // Verificar se todos os campos estão preenchidos
+    if (!query || !cpfOrRne || !number || !gender || !modalidade || !dob) {
+      Alert.alert('Erro', 'Por favor, preencha todos os campos.');
+      return;
+    }
 
   // Criar o objeto com os dados do corredor
   const corredor = {
@@ -204,64 +204,63 @@ const handlePostNewCorredor = async () => {
   }
 };
 
-
-const handlePutCorredor = async () => {
-  if (!query || !cpfOrRne || !number || !gender || !modalidade || !dob) {
-    Alert.alert('Erro', 'Por favor, preencha todos os campos.');
-    return;
-  }
-
-  if (!selectedId) {
-    Alert.alert('Erro', 'Nenhum atleta selecionado.');
-    return;
-  }
-
-  const corredor = {
-    nome: query,
-    documento: cpfOrRne,
-    numero_peito: parseInt(number, 10),
-    sexo: gender,
-    data_nascimento: formatDate(dob),  // A data será convertida para string
-    modalidade,
-    monitor: 'default'
-  };
-
-  try {
-    const response = await fetch(`${urlBase}.execute-api.us-east-1.amazonaws.com/prd/atletas/${selectedId}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(corredor)
-    });
-
-    const data = await response.json();
-
-    if (response.ok) {
-      Alert.alert('Sucesso', 'Check-in realizado com sucesso!');
-      
-
-      // Limpar os campos de entrada após o cadastro
-      setQuery('');  // Limpar o nome
-      setCpfOrRne('');  // Limpar o CPF/RNE
-      setNumber('');  // Limpar o número do peito
-      setDob(new Date());  // Limpar a data de nascimento (definir como valor padrão ou vazio)
-      setGender('');  // Limpar o sexo
-      setModalidade('');  // Limpar a modalidade
-
-      // Tornar os campos editáveis novamente, caso necessário
-      setIsNameEditable(true);
-      setIsCpfOrRneEditable(true);
-      setIsNumberEditable(true);
-      setSelectedId(null);  // Limpar a seleção de ID, se houver
-    } else {
-      Alert.alert('Erro', data.message || 'Não foi possível atualizar dados do atleta.');
+  const handlePutCorredor = async () => {
+    if (!query || !cpfOrRne || !number || !gender || !modalidade || !dob) {
+      Alert.alert('Erro', 'Por favor, preencha todos os campos.');
+      return;
     }
-  } catch (error) {
-    console.error('Erro ao atualizar dados do atleta:', error);
-    Alert.alert('Erro', 'Não foi possível atualizar dados do atleta.');
-  }
-};
+
+    if (!selectedId) {
+      Alert.alert('Erro', 'Nenhum atleta selecionado.');
+      return;
+    }
+
+    const corredor = {
+      nome: query,
+      documento: cpfOrRne,
+      numero_peito: parseInt(number, 10),
+      sexo: gender,
+      data_nascimento: formatDate(dob),  // A data será convertida para string
+      modalidade,
+      monitor: 'default'
+    };
+
+    try {
+      const response = await fetch(`${urlBase}.execute-api.us-east-1.amazonaws.com/prd/atletas/${selectedId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(corredor)
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        Alert.alert('Sucesso', 'Check-in realizado com sucesso!');
+        
+
+        // Limpar os campos de entrada após o cadastro
+        setQuery('');  // Limpar o nome
+        setCpfOrRne('');  // Limpar o CPF/RNE
+        setNumber('');  // Limpar o número do peito
+        setDob(new Date());  // Limpar a data de nascimento (definir como valor padrão ou vazio)
+        setGender('');  // Limpar o sexo
+        setModalidade('');  // Limpar a modalidade
+
+        // Tornar os campos editáveis novamente, caso necessário
+        setIsNameEditable(true);
+        setIsCpfOrRneEditable(true);
+        setIsNumberEditable(true);
+        setSelectedId(null);  // Limpar a seleção de ID, se houver
+      } else {
+        Alert.alert('Erro', data.message || 'Não foi possível atualizar dados do atleta.');
+      }
+    } catch (error) {
+      console.error('Erro ao atualizar dados do atleta:', error);
+      Alert.alert('Erro', 'Não foi possível atualizar dados do atleta.');
+    }
+  };
 
   const openDatePicker = () => {
     setShowDatePicker(true);
@@ -277,7 +276,7 @@ const handlePutCorredor = async () => {
       </View>
 
       {/* Campo Nome */}
-      <View style={styles.margem}>
+      <View>
         <Text style={styles.label}>Nome do Corredor</Text>
         <View>
           <TextInput
@@ -285,8 +284,12 @@ const handlePutCorredor = async () => {
             value={query}
             onChangeText={(text) => {
               if (isNameEditable) {
-                setQuery(text);
-                searchForCorredores(text, 'nome');
+                // Remover qualquer caractere que não seja uma letra (inclui espaços, caso necessário)
+                const sanitizedText = text
+                  .replace(/[^a-zA-Z ]/g, '') // Remove caracteres que não são letras ou espaços
+                  .replace(/(?<![a-zA-Z]) /g, ''); // Remove espaços que não são precedidos por uma letra
+                setQuery(sanitizedText);
+                searchForCorredores(sanitizedText, 'nome');
               }
             }}
             placeholder="Digite o nome"
@@ -296,14 +299,17 @@ const handlePutCorredor = async () => {
             <Icon name="pencil" size={20} color="#000" />
           </TouchableOpacity>
         </View>
-        {nameSuggestions.length > 0 && (
+        {/* Verificar se o campo não está vazio antes de renderizar as sugestões */}
+        {query.trim() !== '' && nameSuggestions.length > 0 && (
           <View style={styles.suggestionsContainer}>
             <FlatList
               data={nameSuggestions}
               keyExtractor={(item) => item.id_atleta}
               renderItem={({ item }) => (
                 <TouchableOpacity onPress={() => handleSelectItem(item)}>
-                  <Text style={styles.suggestionItem}>{item.nome} - {item.documento}</Text>
+                  <Text style={styles.suggestionItem}>
+                    {item.nome} - {item.documento}
+                  </Text>
                 </TouchableOpacity>
               )}
             />
@@ -312,63 +318,79 @@ const handlePutCorredor = async () => {
       </View>
 
       {/* Campo CPF ou RNE */}
-      <View style={styles.margem}>
-        <Text style={styles.label}>CPF ou RNE</Text>
-        <View>
-          <TextInput
-            style={styles.input}
-            value={cpfOrRne}
-            onChangeText={(text) => {
-              if (isCpfOrRneEditable) {
-                setCpfOrRne(text);
-                searchForCorredores(text, 'documento');
-              }
-            }}
-            placeholder="Digite o CPF ou RNE"
-            editable={isCpfOrRneEditable}
-          />
-          <TouchableOpacity onPress={() => setIsCpfOrRneEditable(true)}>
-            <Icon name="pencil" size={20} color="#000" />
-          </TouchableOpacity>
-        </View>
-        {cpfSuggestions.length > 0 && (
-          <View style={styles.suggestionsContainer}>
-            <FlatList
-              data={cpfSuggestions}
-              keyExtractor={(item) => item.id_atleta}
-              renderItem={({ item }) => (
-                <TouchableOpacity onPress={() => handleSelectItem(item)}>
-                  <Text style={styles.suggestionItem}>{item.nome} - {item.documento}</Text>
-                </TouchableOpacity>
-              )}
-            />
-          </View>
-        )}
+    <View>
+      <Text style={styles.label}>CPF ou RNE</Text>
+      <View>
+        <TextInput
+          style={styles.input}
+          value={cpfOrRne}
+          onChangeText={(text) => {
+            if (isCpfOrRneEditable) {
+              // Remove a vírgula (`,`) do texto antes de atualizar o estado
+              const sanitizedText = text.replace(/[,\s]/g, ''); // Remove vírgulas e espaços, mas mantém o traço
+              setCpfOrRne(sanitizedText);
+              searchForCorredores(sanitizedText, 'documento');
+            }
+          }}
+          placeholder="Digite o CPF ou RNE"
+          editable={isCpfOrRneEditable}
+          keyboardType="numeric" // Usando teclado numérico
+        />
+        <TouchableOpacity onPress={() => setIsCpfOrRneEditable(true)}>
+          <Icon name="pencil" size={20} color="#000" />
+        </TouchableOpacity>
       </View>
+      {/* Verificar se o campo não está vazio antes de renderizar as sugestões */}
+      {cpfOrRne.trim() !== '' && cpfSuggestions.length > 0 && (
+        <View style={styles.suggestionsContainer}>
+          <FlatList
+            data={cpfSuggestions}
+            keyExtractor={(item) => item.id_atleta}
+            renderItem={({ item }) => (
+              <TouchableOpacity onPress={() => handleSelectItem(item)}>
+                <Text style={styles.suggestionItem}>
+                  {item.nome} - {item.documento}
+                </Text>
+              </TouchableOpacity>
+            )}
+          />
+        </View>
+      )}
+    </View>
 
       {/* Campo Número do Corredor */}
-      <View style={styles.margem}>
+      <View>
         <Text style={styles.label}>Número do Corredor</Text>
         <View>
           <TextInput
             style={styles.input}
             value={number}
             onChangeText={(text) => {
+              // Remove ponto e vírgula
+              const sanitizedText = text.replace(/[,.\-\s]/g, '');
+
               if (isNumberEditable) {
-                setNumber(text);
-                searchForCorredores(text, 'numero_peito');
+                setNumber(sanitizedText); // Atualiza o estado com o texto sem ponto e vírgula
               }
             }}
             placeholder="Digite o número do corredor"
             editable={isNumberEditable}
+            keyboardType="numeric"  // Usando teclado numérico, que não inclui ponto ou vírgula
+            onKeyPress={(e) => {
+              // Bloqueia as teclas ponto (.) e vírgula (,)
+              if (e.nativeEvent.key === '.' || e.nativeEvent.key === ',') {
+                e.preventDefault(); // Impede a inserção de ponto e vírgula
+              }
+            }}
           />
           <TouchableOpacity onPress={() => setIsNumberEditable(true)}>
             <Icon name="pencil" size={20} color="#000" />
           </TouchableOpacity>
         </View>
       </View>
-
-      <View style={styles.margem}>
+      
+      {/* Campo Data de Nascimento */}
+      <View>
         <Text style={styles.label}>Data de Nascimento</Text>
         <TouchableOpacity onPress={openDatePicker}>
           <View style={styles.input}>
@@ -389,7 +411,7 @@ const handlePutCorredor = async () => {
       </View>
 
       {/* Campo Gênero */}
-      <View style={styles.margem}>
+      <View>
         <Text style={styles.label}>Sexo</Text>
         <View style={styles.pickerContainer}> 
           <Picker
@@ -397,15 +419,15 @@ const handlePutCorredor = async () => {
             onValueChange={(itemValue) => setGender(itemValue)}
             style={styles.picker}  // Estilo do Picker
           >
-            <Picker.Item label="Selecione o Sexo" value="" />
-            <Picker.Item label="Masculino" value="Masculino" />
-            <Picker.Item label="Feminino" value="Feminino" />
+            <Picker.Item label="Selecione o Sexo" value="" style={styles.pickerItem} />
+            <Picker.Item label="Masculino" value="Masculino" style={styles.pickerItem} />
+            <Picker.Item label="Feminino" value="Feminino" style={styles.pickerItem} />
           </Picker>
         </View>
-      </View>
+      </View>      
 
       {/* Campo Modalidade */}
-      <View style={styles.margem}>
+      <View>
         <Text style={styles.label}>Modalidade</Text>
         <View style={styles.pickerContainer}> 
           <Picker
@@ -413,9 +435,9 @@ const handlePutCorredor = async () => {
             onValueChange={(itemValue) => setModalidade(itemValue)}
             style={styles.picker}  // Estilo do Picker
           >
-            <Picker.Item label="Selecione a modalidade" value="" />
-            <Picker.Item label="Corrida" value="Corrida" />
-            <Picker.Item label="Caminhada" value="Caminhada" />
+            <Picker.Item label="Selecione a modalidade" value="" style={styles.pickerItem} />
+            <Picker.Item label="Corrida" value="Corrida" style={styles.pickerItem} />
+            <Picker.Item label="Caminhada" value="Caminhada" style={styles.pickerItem} />
           </Picker>
         </View>
       </View>
@@ -439,18 +461,22 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: width * 0.05, // 5% da largura da tela
     backgroundColor: '#F0F8FF',
-    justifyContent: 'flex-start', // Garante que o conteúdo comece do topo
+    justifyContent: "flex-star", // Garante que o conteúdo comece do topo
   },
   backButton: {
-    top: height * 0.01, // 1% da altura da tela
+    top: height * 0.02, // 1% da altura da tela
     left: width * 0.01, // 2% da largura da tela
   },
   title: {
-    fontSize: width * 0.09, // 8% da largura da tela
+    fontSize: width * 0.1, // 8% da largura da tela
     fontWeight: 'bold',
     textAlign: 'center',
-    marginBottom: height * 0.005, // 2% da altura da tela
+    marginBottom: height * 0.001, // 2% da altura da tela
     color: '#007BFF',
+  },
+  label:{
+    fontSize: width * 0.05, // 8% da largura da tela
+
   },
   iconContainer: {
     width: width * 0.5, // 50% da largura da tela
@@ -464,18 +490,19 @@ const styles = StyleSheet.create({
   },
   input: {
     width: '100%',
+    fontSize: 20,
     height: height * 0.07, // 7% da altura da tela
     borderColor: '#ccc',
     borderWidth: 1,
     borderRadius: 10,
     paddingHorizontal: width * 0.03, // 3% da largura da tela
     backgroundColor: '#ffffff',
-    marginBottom: height * 0.01, // 1% da altura da tela
+    marginBottom: height * 0.001, // 1% da altura da tela
   },
   buttonContainer: {
     flexDirection: 'row', // Coloca os botões lado a lado
     justifyContent: 'space-between', // Espaçamento uniforme entre os botões
-    marginTop: height * 0.02, // 2% da altura da tela
+    marginTop: height * 0.01, // 2% da altura da tela
   },
   button: {
     flex: 1, // Faz os botões terem tamanhos iguais
@@ -488,13 +515,14 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 5,
     elevation: 4,
+    marginBottom: width * 0.07,
   },
   buttonText: {
     color: '#fff',
-    fontSize: width * 0.04, // 4% da largura da tela
+    fontSize: width * 0.05, // 4% da largura da tela
   },
   dataplaceholder: {
-    fontSize: width * 0.04, // 4% da largura da tela
+    fontSize: 20, // 4% da largura da tela
     lineHeight: height * 0.07, // Centraliza o texto verticalmente, ajustando a altura da linha para igualar à altura do campo
     width: '100%', // Garante que o texto ocupe toda a largura disponível
   },
@@ -511,6 +539,7 @@ const styles = StyleSheet.create({
   },
   suggestionItem: {
     padding: 10,
+    fontSize: 17,
     borderBottomWidth: 1,
     borderBottomColor: '#ccc',
   },
@@ -527,5 +556,9 @@ const styles = StyleSheet.create({
     width: '100%',
     height: height * 0.075, // 6% da altura da tela, igual ao TextInput
     backgroundColor: '#ffffff',
+  },
+  pickerItem: {
+    fontSize: 20,  // Ajuste o tamanho da fonte conforme necessário
+    color: '#000', // Cor da fonte (opcional)
   },
 });
